@@ -1,0 +1,55 @@
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: daas-template
+spec:
+  params:
+    - name: appname
+      type: string
+      description: The application name
+      default: 'myapp'
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1beta1
+      kind: PipelineRun
+      metadata:
+        name: daas-$(params.appname)-$(uid)
+      spec:
+        workspaces:
+          - name: source
+            persistentVolumeClaim:
+              claimName: daas-working-dir-pvc
+            subPath: source
+        pipelineSpec:
+          workspaces:
+            - name: source
+          tasks:
+            - name: fetch
+              params:
+                - name: url
+                  value: 'https://github.com/kiegroup/kogito-examples.git'
+                - name: revision
+                  value: 'master'
+                - name: deleteExisting
+                  value: 'true'
+              workspaces:
+                - name: output
+                  workspace: source
+              taskRef:
+                name: git-clone
+                kind: ClusterTask
+            - name: build-and-push
+              runAfter:
+                - fetch
+              params:
+                - name: TLSVERIFY
+                  value: 'false'
+                - name: PATH_CONTEXT
+                  value: 'dmn-quarkus-example'
+                - name: IMAGE_FULL_TAG
+                  value: 'image-registry.openshift-image-registry.svc:5000/kiegroup/daas-executor-ubi8-native:latest'
+              workspaces:
+                - name: source
+                  workspace: source
+              taskRef:
+                name: s2i-kogito
+                kind: ClusterTask

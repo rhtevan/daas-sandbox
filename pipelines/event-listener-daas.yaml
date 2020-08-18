@@ -1,0 +1,12 @@
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: daas
+spec:
+  serviceAccountName: pipeline
+  triggers:
+    - name: daas
+      bindings:
+        - name: daas-binding
+      template:
+        name: daas-template

@@ -9,7 +9,10 @@ install_module() {
     cp -v -r ${SCRIPT_DIR}/launch/* ${DAAS_HOME}/launch
 
     mkdir -p /var/www/html
-    cp -v -r ${SCRIPT_DIR}/www/* /var/www/html
+    cp -v -r ${SCRIPT_DIR}/www/html/* /var/www/html
+
+    mkdir -p /var/www/cgi-bin
+    cp -v -r ${SCRIPT_DIR}/www/cgi-bin/* /var/www/cgi-bin
 
     local webdav_mount_path=${WEBDAV_MOUNT_PATH:-/var/www/webdav}
     mkdir -p ${webdav_mount_path}

@@ -9,7 +9,7 @@ install_module() {
     cp -v -r ${SCRIPT_DIR}/launch/* ${DAAS_HOME}/launch
 
     mkdir -p /var/www/html
-    # cp -v -r ${SCRIPT_DIR}/www/* /var/www/html
+    # cp -v -r ${SCRIPT_DIR}/www/html/* /var/www/html
 
     # kogito online modeler
     git clone --single-branch --branch gh-pages https://github.com/kiegroup/kogito-online.git

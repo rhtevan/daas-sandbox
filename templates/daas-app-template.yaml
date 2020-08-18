@@ -395,6 +395,8 @@ objects:
                   containerPort: 8080
                   protocol: TCP
               env:
+                - name: APPLICATION_NAME
+                  value: '${APPLICATION_NAME}'
                 - name: SCRIPT_DEBUG
                   value: '${SCRIPT_DEBUG}'
                 - name: WEBDAV_MOUNT_PATH

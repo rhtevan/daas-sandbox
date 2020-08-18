@@ -20,4 +20,7 @@ source ${DAAS_HOME}/launch/configure.sh
 
 log_info "Launching acceptor..."
 
+# sourced by www/cgi-bin/webhook
+env > ${DAAS_HOME}/env
+
 exec /usr/sbin/httpd -DFOREGROUND

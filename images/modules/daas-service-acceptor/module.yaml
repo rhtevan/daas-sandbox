@@ -11,6 +11,7 @@ labels:
 packages:
   install:
     - httpd
+    - jq
 
 ports:
     - value: 8080

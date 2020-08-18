@@ -1,0 +1,84 @@
+#!/bin/bash
+
+JSON_REQUEST="$(cat -)"
+
+DAAS_HOME="/home/daas"
+# env file created y launch/launch-acceptor.sh
+if [ -f  "${DAAS_HOME}/env" ]; then
+    source "${DAAS_HOME}/env"
+fi
+
+LOCAL_REPO_DIR="${DAAS_HOME}/repos/${APPLICATION_NAME:-myapp}"
+LOCAL_WEBDAV_DIR="${WEBDAV_MOUNT_PATH:-/var/www/webdav}"
+
+sync_git() {
+    local repository_clone_url="$(jq -r ".repository.clone_url" <<< "${JSON_REQUEST}")"
+    local sync_git_result=0
+    if [ -d "${LOCAL_REPO_DIR}" ]; then
+        pushd . &> /dev/null
+        cd "${LOCAL_REPO_DIR}"
+        git pull -q
+        sync_git_result=$?
+        popd &> /dev/null
+    else
+        mkdir -p "${LOCAL_REPO_DIR}"
+        git clone -q ${repository_clone_url} "${LOCAL_REPO_DIR}"
+        sync_git_result=$?
+    fi
+    return ${sync_git_result}
+}
+
+copy_dmn() {
+    local commits_added="$(jq -r ".commits[0].added[]" <<< "${JSON_REQUEST}")"
+    local commits_modified="$(jq -r ".commits[0].modified[]" <<< "${JSON_REQUEST}")"
+    local copy_dmn_result=0
+    local loop_result
+    for F in ${commits_added[@]} ${commits_modified[@]} ; do
+        if [[ "${F}" =~ .*\.dmn ]]; then
+            mkdir -p $(dirname "${LOCAL_WEBDAV_DIR}/${F}")
+            cp -f "${LOCAL_REPO_DIR}/${F}" "${LOCAL_WEBDAV_DIR}/${F}"
+            loop_result=$?
+            if [ ${loop_result} -ne 0 ]; then
+                copy_dmn_result=1
+            fi
+        fi
+    done
+    local commits_removed="$(jq -r ".commits[0].removed[]" <<< "${JSON_REQUEST}")"
+    for F in ${commits_removed[@]} ; do
+        if [[ "${F}" =~ .*\.dmn ]]; then
+            rm -f "${LOCAL_WEBDAV_DIR}/${F}"
+            loop_result=$?
+            if [ ${loop_result} -ne 0 ]; then
+                copy_dmn_result=1
+            fi
+        fi
+    done
+    return ${copy_dmn_result}
+}
+
+echo_json() {
+    local success="${1}"
+    read -r -d '' json_response << EOM
+{
+    "success": "${success}"
+}
+EOM
+    if [ "${success}" == "true" ]; then
+        echo "Status: 200 OK"
+    else
+        echo "Status: 503 Webhook Failure"
+    fi
+    echo "Content-Type: text/json"
+    echo ""
+    echo "${json_response}"
+}
+
+main() {
+    if sync_git && copy_dmn; then
+        echo_json "true"
+    else
+        echo_json "false"
+    fi
+}
+
+main ${@}

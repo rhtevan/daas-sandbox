@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: daas-working-dir-pvc
+  name: daas-work-dir-pvc
 spec:
   resources:
     requests:
@@ -15,12 +15,17 @@ kind: PipelineRun
 metadata:
   name: pipeline-run-daas-test
 spec:
+  params:
+    - name: appname
+      value: 'dmn-quarkus-example'
   workspaces:
     - name: source
       persistentVolumeClaim:
-        claimName: daas-working-dir-pvc
-      subPath: source
+        claimName: daas-work-dir-pvc
+      subPath: work
   pipelineSpec:
+    params:
+      - name: appname
     workspaces:
       - name: source
     tasks:
@@ -45,14 +50,12 @@ spec:
           - name: TLSVERIFY
             value: 'false'
           - name: PATH_CONTEXT
-            value: 'dmn-quarkus-example'
+            value: $(params.appname)
           - name: IMAGE_FULL_TAG
-            value: 'image-registry.openshift-image-registry.svc:5000/kiegroup/daas-executor-ubi8-native:latest'
+            value: 'image-registry.openshift-image-registry.svc:5000/kiegroup/daas-executor-ubi8-$(params.appname)-native:latest'
         workspaces:
           - name: source
             workspace: source
         taskRef:
           name: s2i-kogito
           kind: ClusterTask
-
-

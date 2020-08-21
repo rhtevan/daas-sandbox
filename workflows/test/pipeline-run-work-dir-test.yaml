@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: daas-work-dir-pvc
+spec:
+  resources:
+    requests:
+      storage: 10Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+---
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: pipeline-run-work-dir-test
+spec:
+  params:
+    - name: appname
+      value: 'dmn-quarkus-example'
+  workspaces:
+    - name: source
+      persistentVolumeClaim:
+        claimName: daas-work-dir-pvc
+      subPath: work
+  pipelineSpec:
+    params:
+      - name: appname
+    workspaces:
+      - name: source
+    tasks:
+      - name: fetch
+        params:
+          - name: url
+            value: 'https://github.com/kiegroup/kogito-examples.git'
+          - name: revision
+            value: 'master'
+          - name: deleteExisting
+            value: 'true'
+        workspaces:
+          - name: output
+            workspace: source
+        taskRef:
+          name: git-clone
+          kind: ClusterTask
+      - name: check
+        runAfter:
+          - fetch
+        params:
+          - name: name
+            value: $(params.appname)
+        workspaces:
+          - name: source
+            workspace: source
+        taskSpec:
+          params:
+            - name: name
+          workspaces:
+            - name: source
+          steps:
+            - name: snapshot
+              image: 'registry.access.redhat.com/ubi8/ubi-minimal:latest'
+              script: | 
+                #!/bin/bash
+                cd $(workspaces.source.path) && pwd && ls -alF .
+                cd $(params.name) && pwd && ls -alF .
+                [[ -e pom.xml ]] && head -n 13 pom.xml

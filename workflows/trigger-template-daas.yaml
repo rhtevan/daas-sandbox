@@ -1,0 +1,73 @@
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: daas-template
+spec:
+  params:
+    - name: appname
+      type: string
+      description: The application name
+      default: 'myapp'
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1beta1
+      kind: PipelineRun
+      metadata:
+        name: daas-$(params.appname)-$(uid)
+      spec:
+        workspaces:
+          - name: work-dir
+            persistentVolumeClaim:
+              claimName: daas-work-dir-pvc
+            subPath: work/$(params.appname)
+          - name: source-dir
+            persistentVolumeClaim:
+              claimName: daas-work-dir-pvc
+            subPath: tmp/$(params.appname)
+        pipelineSpec:
+          workspaces:
+            - name: work-dir
+            - name: source-dir
+          tasks:
+            - name: prepare-app-source-dir
+              workspaces:
+                - name: work
+                  workspace: work-dir
+                - name: source
+                  workspace: source-dir
+              taskSpec:
+                workspaces:
+                  - name: work
+                  - name: source
+                steps:
+                  - name: take-snapshot
+                    image: 'registry.access.redhat.com/ubi8/ubi-minimal:latest'
+                    script: |
+                      #!/bin/bash
+                      if [[ -e "$(workspaces.source.path)/pom.xml" ]] ; then
+                        echo cleaning application source tmp directory
+                        # Delete non-hidden files and directories
+                        rm -rf "$(workspaces.source.path)"/*
+                        # Delete files and directories starting with . but excluding ..
+                        rm -rf "$(workspaces.source.path)"/.[!.]*
+                        # Delete files and directories starting with .. plus any other character
+                        rm -rf "$(workspaces.source.path)"/..?*
+                      fi
+                      cp -r $(workspaces.work.path)/* $(workspaces.source.path)
+                      head -n 13 $(workspaces.source.path)/pom.xml
+                      ls -alF $(workspaces.source.path)
+            - name: build-and-push
+              runAfter:
+                - prepare-app-source-dir
+              params:
+                - name: TLSVERIFY
+                  value: 'false'
+                - name: PATH_CONTEXT
+                  value: '.'
+                - name: IMAGE_FULL_TAG
+                  value: 'image-registry.openshift-image-registry.svc:5000/kiegroup/daas-executor-ubi8-$(params.appname)-native:latest'
+              workspaces:
+                - name: source
+                  workspace: source-dir
+              taskRef:
+                name: s2i-kogito
+                kind: ClusterTask

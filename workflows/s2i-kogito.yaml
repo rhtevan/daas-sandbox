@@ -4,10 +4,10 @@ metadata:
   name: s2i-kogito
 spec:
   params:
-    - name: PATH_CONTEXT
+    - name: APPLICATION_NAME
       type: string
-      default: .
-      description: The location of the path to run s2i from
+      default: 'myapp'
+      description: The application name
     - name: TLSVERIFY
       type: string
       default: 'true'
@@ -26,12 +26,20 @@ spec:
       type: string
       default: ''
       description: The base URL of a mirror used for retrieving artifacts
-    - name: IMAGE_FULL_TAG
+    - name: EXECUTOR_IMAGE_TAG
       type: string
-      default: ''
-      description: The full image tag of the generated image
+      description: The full image tag of the generated executor image
+    - name: BUILDER_IMAGE_TAG
+      type: string
+      default: 'quay.io/kiegroup/kogito-quarkus-jvm-ubi8:latest'
+      description: The base image used for packaging compiled runner
+    - name: NATIVE
+      type: string
+      default: 'false'
+      description: If true build native image, otherwise normal image
   workspaces:
     - name: source
+    - name: repo
   steps:
     - name: gen-env-file
       image: registry.redhat.io/ocp-tools-43-tech-preview/source-to-image-rhel8
@@ -41,16 +49,8 @@ spec:
         - '-c'
       args:
         - |
-          echo "MAVEN_CLEAR_REPO=$(params.MAVEN_CLEAR_REPO)" > env-file
-
-          [[ '$(params.MAVEN_ARGS_APPEND)' != "" ]] &&
-            echo "MAVEN_ARGS_APPEND=$(params.MAVEN_ARGS_APPEND)" >> env-file
-
-          [[ '$(params.MAVEN_MIRROR_URL)' != "" ]] &&
-            echo "MAVEN_MIRROR_URL=$(params.MAVEN_MIRROR_URL)" >> env-file
-          
           # Enable quarkus native image build
-          echo "NATIVE=true" >> env-file
+          echo "NATIVE=$(params.NATIVE)" >> env-file
 
           echo "Generated Env file"
           echo "------------------------------"
@@ -59,14 +59,53 @@ spec:
       volumeMounts:
         - name: envparams
           mountPath: /env-params
-    - name: generate
+    - name: compile
+      image: quay.io/kiegroup/kogito-quarkus-ubi8-s2i:latest
+      script: |
+        #!/usr/bin/env bash
+        appName="$(params.APPLICATION_NAME)"
+        appWorkDir="$(workspaces.source.path)/$appName"
+        appTmpDir="/tmp"
+        nativeBuild="$(params.NATIVE)"
+        repoDir="/home/kogito/.m2"
+
+        echo "id: $(id)"
+        echo "application name: $appName"
+        echo "native mode: $nativeBuild"
+
+        echo "create symbolic link to maven repo"
+        cd $repoDir
+        ln -sf $(workspaces.repo.path) repository
+
+        if [[ ! -d "$appWorkDir" ]] ; then
+          echo "Working directory for application: $appName not found!"
+          exit 1
+        fi
+
+        cp -r $appWorkDir/* $appTmpDir
+        cd $appTmpDir
+
+        if [[ ${nativeBuild^^} == 'TRUE' ]] ; then
+          echo "native build..."
+          exec /usr/share/maven/bin/mvn clean package -Pnative
+        else
+          echo "normal build..."
+          exec /usr/share/maven/bin/mvn clean package
+        fi
+      securityContext:
+        runAsUser: 1001
+        runAsGroup: 0
+      volumeMounts:
+        - mountPath: /tmp
+          name: tmp
+    - name: build
       image: registry.redhat.io/ocp-tools-43-tech-preview/source-to-image-rhel8
-      workingDir: $(workspaces.source.path)
+      workingDir: /tmp
       command:
         - s2i
         - build
-        - $(params.PATH_CONTEXT)
-        - quay.io/kiegroup/kogito-quarkus-ubi8-s2i:latest
+        - target
+        - $(params.BUILDER_IMAGE_TAG)
         - '--image-scripts-url'
         - 'image:///usr/local/s2i'
         - '--as-dockerfile'
@@ -78,18 +117,21 @@ spec:
           name: gen-source
         - mountPath: /env-params
           name: envparams
-    - name: build
+        - mountPath: /tmp
+          name: tmp
+    - name: package
       image: registry.redhat.io/rhel8/buildah
       workingDir: /gen-source
       command:
         - buildah
         - bud
         - '--tls-verify=$(params.TLSVERIFY)'
-        - '--layers'
+        - '--layers=false'
+        - '--squash'
         - '-f'
         - /gen-source/Dockerfile.gen
         - '-t'
-        - $(params.IMAGE_FULL_TAG)
+        - $(params.EXECUTOR_IMAGE_TAG)
         - .
       securityContext:
         privileged: true
@@ -104,8 +146,8 @@ spec:
         - buildah
         - push
         - '--tls-verify=$(params.TLSVERIFY)'
-        - $(params.IMAGE_FULL_TAG)
-        - 'docker://$(params.IMAGE_FULL_TAG)'
+        - $(params.EXECUTOR_IMAGE_TAG)
+        - 'docker://$(params.EXECUTOR_IMAGE_TAG)'
       securityContext:
         privileged: true
       volumeMounts:
@@ -118,4 +160,5 @@ spec:
       emptyDir: {}
     - name: envparams
       emptyDir: {}
-
+    - name: tmp
+      emptyDir: {}

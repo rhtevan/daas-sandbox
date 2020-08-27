@@ -8,6 +8,18 @@ spec:
       type: string
       description: The application name
       default: 'myapp'
+    - name: native
+      type: string
+      description: If true build native image
+      default: 'true'
+    - name: imagesuffix
+      type: string
+      description: The suffix for executor image tag
+      default: '-native:latest'
+    - name: builderimage
+      type: string
+      description: The base image used for packaging compiled runner
+      default: 'quay.io/kiegroup/kogito-quarkus-ubi8:latest'
   resourcetemplates:
     - apiVersion: tekton.dev/v1beta1
       kind: PipelineRun
@@ -18,56 +30,33 @@ spec:
           - name: work-dir
             persistentVolumeClaim:
               claimName: daas-work-dir-pvc
-            subPath: work/$(params.appname)
-          - name: source-dir
+            subPath: work
+          - name: repo-dir
             persistentVolumeClaim:
               claimName: daas-work-dir-pvc
-            subPath: tmp/$(params.appname)
+            subPath: maven
         pipelineSpec:
           workspaces:
             - name: work-dir
-            - name: source-dir
+            - name: repo-dir
           tasks:
-            - name: prepare-app-source-dir
-              workspaces:
-                - name: work
-                  workspace: work-dir
-                - name: source
-                  workspace: source-dir
-              taskSpec:
-                workspaces:
-                  - name: work
-                  - name: source
-                steps:
-                  - name: take-snapshot
-                    image: 'registry.access.redhat.com/ubi8/ubi-minimal:latest'
-                    script: |
-                      #!/bin/bash
-                      if [[ -e "$(workspaces.source.path)/pom.xml" ]] ; then
-                        echo cleaning application source tmp directory
-                        # Delete non-hidden files and directories
-                        rm -rf "$(workspaces.source.path)"/*
-                        # Delete files and directories starting with . but excluding ..
-                        rm -rf "$(workspaces.source.path)"/.[!.]*
-                        # Delete files and directories starting with .. plus any other character
-                        rm -rf "$(workspaces.source.path)"/..?*
-                      fi
-                      cp -r $(workspaces.work.path)/* $(workspaces.source.path)
-                      head -n 13 $(workspaces.source.path)/pom.xml
-                      ls -alF $(workspaces.source.path)
-            - name: build-and-push
-              runAfter:
-                - prepare-app-source-dir
+            - name: compile-build-and-push
               params:
+                - name: APPLICATION_NAME
+                  value: '$(params.appname)'
                 - name: TLSVERIFY
                   value: 'false'
-                - name: PATH_CONTEXT
-                  value: '.'
-                - name: IMAGE_FULL_TAG
-                  value: 'image-registry.openshift-image-registry.svc:5000/kiegroup/daas-executor-ubi8-$(params.appname)-native:latest'
+                - name: EXECUTOR_IMAGE_TAG
+                  value: 'image-registry.openshift-image-registry.svc:5000/kiegroup/daas-executor-ubi8-$(params.appname)$(params.imagesuffix)'
+                - name: BUILDER_IMAGE_TAG
+                  value: '$(params.builderimage)'
+                - name: NATIVE
+                  value: '$(params.native)'
               workspaces:
                 - name: source
-                  workspace: source-dir
+                  workspace: work-dir
+                - name: repo
+                  workspace: repo-dir
               taskRef:
                 name: s2i-kogito
                 kind: ClusterTask

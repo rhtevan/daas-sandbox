@@ -1,0 +1,46 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: pipeline-run-oc-test
+spec:
+  params:
+    - name: test-data
+      value: 'something'
+  pipelineSpec:
+    params:
+      - name: test-data
+        type: string
+    tasks:
+      - name: oc-test
+        params:
+          - name: data
+            value: $(params.test-data)
+        taskSpec:
+          params:
+            - name: data
+              type: string
+          steps:
+            - name: run-oc-command
+              image: 'image-registry.openshift-image-registry.svc:5000/openshift/cli:latest'
+              script: |
+                #!/usr/bin/env bash
+                oc apply -f - << 'EOF'
+                apiVersion: route.openshift.io/v1
+                kind: Route
+                metadata:
+                  labels:
+                    app.kubernetes.io/managed-by: EventListener
+                    app.kubernetes.io/part-of: Triggers
+                    eventlistener: daas-workflow
+                  name: el-daas-workflow
+                  namespace: kiegroup
+                spec:
+                  host: el-daas-workflow-kiegroup.apps-crc.testing
+                  port:
+                    targetPort: http-listener
+                  to:
+                    kind: Service
+                    name: el-daas-workflow
+                    weight: 100
+                  wildcardPolicy: None
+                EOF

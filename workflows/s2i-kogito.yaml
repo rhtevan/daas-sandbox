@@ -26,10 +26,10 @@ spec:
       type: string
       default: ''
       description: The base URL of a mirror used for retrieving artifacts
-    - name: EXECUTOR_IMAGE_TAG
+    - name: EXECUTOR_IMAGE
       type: string
       description: The full image tag of the generated executor image
-    - name: BUILDER_IMAGE_TAG
+    - name: BUILDER_IMAGE
       type: string
       default: 'quay.io/kiegroup/kogito-quarkus-jvm-ubi8:latest'
       description: The base image used for packaging compiled runner
@@ -105,7 +105,7 @@ spec:
         - s2i
         - build
         - target
-        - $(params.BUILDER_IMAGE_TAG)
+        - $(params.BUILDER_IMAGE)
         - '--image-scripts-url'
         - 'image:///usr/local/s2i'
         - '--as-dockerfile'
@@ -131,7 +131,7 @@ spec:
         - '-f'
         - /gen-source/Dockerfile.gen
         - '-t'
-        - $(params.EXECUTOR_IMAGE_TAG)
+        - $(params.EXECUTOR_IMAGE)
         - .
       securityContext:
         privileged: true
@@ -146,8 +146,8 @@ spec:
         - buildah
         - push
         - '--tls-verify=$(params.TLSVERIFY)'
-        - $(params.EXECUTOR_IMAGE_TAG)
-        - 'docker://$(params.EXECUTOR_IMAGE_TAG)'
+        - $(params.EXECUTOR_IMAGE)
+        - 'docker://$(params.EXECUTOR_IMAGE)'
       securityContext:
         privileged: true
       volumeMounts:

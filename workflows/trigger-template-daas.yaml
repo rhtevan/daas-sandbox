@@ -1,7 +1,7 @@
 apiVersion: triggers.tekton.dev/v1alpha1
 kind: TriggerTemplate
 metadata:
-  name: daas-template
+  name: daas-workflow-template
 spec:
   params:
     - name: appname
@@ -14,17 +14,40 @@ spec:
       default: 'true'
     - name: imagesuffix
       type: string
-      description: The suffix for executor image tag
-      default: '-native:latest'
+      description: The suffix for executor image or daas service component
+      default: 'daas-executor-native'
+    - name: imagetag
+      type: string
+      description: A named pointer to an image in an image stream. Default is '0.1'.
+      default: '0.1'
+    - name: imagenamespace
+      type: string
+      description: >-
+        Namespace in which the ImageStreams for DaaS images are installed. These
+        ImageStreams are normally installed in the openshift namespace.  You need
+        to modify this parameter only if you installed the ImageStream in a
+        different namespace/project.
+      default: 'openshift'
+    - name: imageregistry
+      type: string
+      description: The endpoint of the image registry to which generated images will be published.
+      default: 'image-registry.openshift-image-registry.svc:5000'
     - name: builderimage
       type: string
       description: The base image used for packaging compiled runner
       default: 'quay.io/kiegroup/kogito-quarkus-ubi8:latest'
+    - name: executorhostname
+      type: string
+      description: >-
+        Custom hostname for DaaS native executor http service route. Leave blank for
+        default hostname, e.g.:
+        '<application-name>-daas-executor-native-<project>.<default-domain-suffix>'
+      default: ''
   resourcetemplates:
     - apiVersion: tekton.dev/v1beta1
       kind: PipelineRun
       metadata:
-        name: daas-$(params.appname)-$(uid)
+        name: $(params.appname)-daas-workflow-$(uid)
       spec:
         workspaces:
           - name: work-dir
@@ -40,15 +63,15 @@ spec:
             - name: work-dir
             - name: repo-dir
           tasks:
-            - name: compile-build-and-push
+            - name: compile-build-push
               params:
                 - name: APPLICATION_NAME
                   value: '$(params.appname)'
                 - name: TLSVERIFY
                   value: 'false'
-                - name: EXECUTOR_IMAGE_TAG
-                  value: 'image-registry.openshift-image-registry.svc:5000/kiegroup/daas-executor-ubi8-$(params.appname)$(params.imagesuffix)'
-                - name: BUILDER_IMAGE_TAG
+                - name: EXECUTOR_IMAGE
+                  value: '$(params.imageregistry)/$(params.imagenamespace)/$(params.appname)-$(params.imagesuffix):$(params.imagetag)'
+                - name: BUILDER_IMAGE
                   value: '$(params.builderimage)'
                 - name: NATIVE
                   value: '$(params.native)'
@@ -60,3 +83,103 @@ spec:
               taskRef:
                 name: s2i-kogito
                 kind: ClusterTask
+            - name: create-openshift-resources
+              runAfter:
+                - compile-build-push
+              taskSpec:
+                steps:
+                  - name: oc
+                    image: 'image-registry.openshift-image-registry.svc:5000/openshift/cli:latest'
+                    script: |
+                      #!/usr/bin/env bash
+                      echo "checking openshift resources for daas"
+                      [[ $( oc get dc $(params.appname)-$(params.imagesuffix) ) ]] && echo "daas resources found" && exit 0
+
+                      echo "creating openshift resources for daas" 
+                      oc apply -f - << 'EOF'
+                      ---
+                      apiVersion: v1
+                      kind: Service
+                      metadata:
+                        name: '$(params.appname)-$(params.imagesuffix)'
+                        labels:
+                          application: '$(params.appname)'
+                          service: '$(params.appname)-$(params.imagesuffix)'
+                        annotations:
+                        description: The native DaaS executor web server ports.
+                      spec:
+                        ports:
+                          - name: http
+                            port: 8080
+                            targetPort: 8080
+                        selector:
+                          deploymentConfig: '$(params.appname)-$(params.imagesuffix)'
+                        sessionAffinity: ClientIP
+                        sessionAffinityConfig:
+                          clientIP:
+                            timeoutSeconds: 3600
+                      ---
+                      apiVersion: v1
+                      kind: Route
+                      id: '$(params.appname)-$(params.imagesuffix)-http'
+                      metadata:
+                        name: '$(params.appname)-$(params.imagesuffix)'
+                      labels:
+                        application: '$(params.appname)'
+                        service: '$(params.appname)-$(params.imagesuffix)'
+                      annotations:
+                        description: Route for DaaS native executor's http service.
+                        haproxy.router.openshift.io/balance: source
+                      spec:
+                        host: '$(params.executorhostname)'
+                        to:
+                          name: '$(params.appname)-$(params.imagesuffix)'
+                        port:
+                          targetPort: http
+                      ---
+                      apiVersion: v1
+                      kind: DeploymentConfig
+                      metadata:
+                        name: '$(params.appname)-$(params.imagesuffix)'
+                        labels:
+                          application: '$(params.appname)'
+                          service: '$(params.appname)-$(params.imagesuffix)'
+                      spec:
+                        revisionHistoryLimit: 10
+                        strategy:
+                          type: Rolling
+                          rollingParams:
+                            maxSurge: 100%
+                            maxUnavailable: 0
+                        triggers:
+                          - type: ImageChange
+                            imageChangeParams:
+                              automatic: true
+                              containerNames:
+                                - '$(params.appname)-$(params.imagesuffix)'
+                              from:
+                                kind: ImageStreamTag
+                                namespace: '$(params.imagenamespace)'
+                                name: '$(params.appname)-$(params.imagesuffix):$(params.imagetag)'
+                          - type: ConfigChange
+                        replicas: 1
+                        selector:
+                          deploymentConfig: '$(params.appname)-$(params.imagesuffix)'
+                        template:
+                          metadata:
+                            name: '$(params.appname)-$(params.imagesuffix)'
+                            labels:
+                              deploymentConfig: '$(params.appname)-$(params.imagesuffix)'
+                              application: '$(params.appname)'
+                              service: '$(params.appname)-$(params.imagesuffix)'
+                          spec:
+                            terminationGracePeriodSeconds: 60
+                            containers:
+                              - name: '$(params.appname)-$(params.imagesuffix)'
+                                image: '$(params.appname)-$(params.imagesuffix)'
+                                imagePullPolicy: Always
+                                ports:
+                                  - name: http
+                                    containerPort: 8080
+                                    protocol: TCP
+                      EOF

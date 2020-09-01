@@ -87,15 +87,10 @@ parameters:
       '<application-name>-executor-<project>.<default-domain-suffix>'
     value: ''
     required: false
-  - name: WEBDAV_MOUNT_PATH
-    displayName: WebDAV Mount Path
-    description: Path of persistent storage for the WebDAV mount.
-    value: /var/www/webdav
-    required: true
-  - name: WEBDAV_VOLUME_CAPACITY
-    displayName: WebDAV Volume Capacity
-    description: Size of persistent storage for the WebDAV volume.
-    value: 1Gi
+  - name: MODELS_VOLUME_CAPACITY
+    displayName: Models Volume Capacity
+    description: Size of persistent storage for the Models volume.
+    value: 100Mi
     required: true
   - name: MAVEN_MIRROR_URL
     displayName: Maven Mirror URL
@@ -158,6 +153,9 @@ objects:
         - name: http
           port: 8080
           targetPort: 8080
+        - name: modeler
+          port: 9090
+          targetPort: 9090
       selector:
         deploymentConfig: '${APPLICATION_NAME}-daas-acceptor'
       sessionAffinity: ClientIP
@@ -397,17 +395,17 @@ objects:
               env:
                 - name: APPLICATION_NAME
                   value: '${APPLICATION_NAME}'
+                - name: APPLICATION_PATH
+                  value: '/home/daas/apps/${APPLICATION_NAME}'
                 - name: SCRIPT_DEBUG
                   value: '${SCRIPT_DEBUG}'
-                - name: WEBDAV_MOUNT_PATH
-                  value: '${WEBDAV_MOUNT_PATH}'
               volumeMounts:
-                - name: '${APPLICATION_NAME}-daas-webdav-pvol'
-                  mountPath: '${WEBDAV_MOUNT_PATH}'
+                - name: '${APPLICATION_NAME}-daas-models-pvol'
+                  mountPath: '/home/daas/apps/${APPLICATION_NAME}/src/main/resources'
           volumes:
-            - name: '${APPLICATION_NAME}-daas-webdav-pvol'
+            - name: '${APPLICATION_NAME}-daas-models-pvol'
               persistentVolumeClaim:
-                claimName: '${APPLICATION_NAME}-daas-webdav-claim'
+                claimName: '${APPLICATION_NAME}-daas-models-claim'
   - kind: DeploymentConfig
     apiVersion: v1
     metadata:
@@ -466,16 +464,16 @@ objects:
                 - name: SCRIPT_DEBUG
                   value: '${SCRIPT_DEBUG}'
               volumeMounts:
-                - name: '${APPLICATION_NAME}-daas-webdav-pvol'
+                - name: '${APPLICATION_NAME}-daas-models-pvol'
                   mountPath: '/home/daas/apps/${APPLICATION_NAME}/src/main/resources'
           volumes:
-            - name: '${APPLICATION_NAME}-daas-webdav-pvol'
+            - name: '${APPLICATION_NAME}-daas-models-pvol'
               persistentVolumeClaim:
-                claimName: '${APPLICATION_NAME}-daas-webdav-claim'
+                claimName: '${APPLICATION_NAME}-daas-models-claim'
   - kind: PersistentVolumeClaim
     apiVersion: v1
     metadata:
-      name: '${APPLICATION_NAME}-daas-webdav-claim'
+      name: '${APPLICATION_NAME}-daas-models-claim'
       labels:
         application: '${APPLICATION_NAME}'
         service: '${APPLICATION_NAME}-daas-acceptor'
@@ -484,4 +482,4 @@ objects:
         - ReadWriteOnce
       resources:
         requests:
-          storage: '${WEBDAV_VOLUME_CAPACITY}'
+          storage: '${MODELS_VOLUME_CAPACITY}'

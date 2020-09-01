@@ -22,6 +22,7 @@ modules:
   install:
     - name: org.kie.daas.common.modules
     - name: org.kie.daas.scripts.kubernetes
+    - name: org.kie.daas.modeler.frontend
     - name: org.kie.daas.service.modeler
     - name: org.kie.daas.common.cleanup
 

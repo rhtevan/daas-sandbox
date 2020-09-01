@@ -21,6 +21,7 @@ modules:
     - path: modules
   install:
     - name: org.kie.daas.common.modules
+    - name: org.kie.daas.modeler.backend
     - name: org.kie.daas.service.acceptor
     - name: org.kie.daas.common.cleanup
 

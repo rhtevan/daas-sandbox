@@ -8,21 +8,21 @@ if [ -f  "${DAAS_HOME}/env" ]; then
     source "${DAAS_HOME}/env"
 fi
 
-LOCAL_REPO_DIR="${DAAS_HOME}/repos/${APPLICATION_NAME:-myapp}"
-LOCAL_WEBDAV_DIR="${WEBDAV_MOUNT_PATH:-/var/www/webdav}"
+CLONE_DIR="${WEBHOOK_CLONES_DIR:-${DAAS_HOME}/git/webhook-clones}/${APPLICATION_NAME:-myapp}"
+APP_DIR="${APPLICATION_PATH:-${DAAS_HOME}/apps/${APPLICATION_NAME:-myapp}}"
 
 sync_git() {
     local repository_clone_url="$(jq -r ".repository.clone_url" <<< "${JSON_REQUEST}")"
     local sync_git_result=0
-    if [ -d "${LOCAL_REPO_DIR}" ]; then
+    if [ -d "${CLONE_DIR}" ]; then
         pushd . &> /dev/null
-        cd "${LOCAL_REPO_DIR}"
+        cd "${CLONE_DIR}"
         git pull -q
         sync_git_result=$?
         popd &> /dev/null
     else
-        mkdir -p "${LOCAL_REPO_DIR}"
-        git clone -q ${repository_clone_url} "${LOCAL_REPO_DIR}"
+        mkdir -p "${CLONE_DIR}"
+        git clone -q ${repository_clone_url} "${CLONE_DIR}"
         sync_git_result=$?
     fi
     return ${sync_git_result}
@@ -35,8 +35,8 @@ copy_dmn() {
     local loop_result
     for F in ${commits_added[@]} ${commits_modified[@]} ; do
         if [[ "${F}" =~ .*\.dmn ]]; then
-            mkdir -p $(dirname "${LOCAL_WEBDAV_DIR}/${F}")
-            cp -f "${LOCAL_REPO_DIR}/${F}" "${LOCAL_WEBDAV_DIR}/${F}"
+            mkdir -p $(dirname "${APP_DIR}/${F}")
+            cp -f "${CLONE_DIR}/${F}" "${APP_DIR}/${F}"
             loop_result=$?
             if [ ${loop_result} -ne 0 ]; then
                 copy_dmn_result=1
@@ -46,7 +46,7 @@ copy_dmn() {
     local commits_removed="$(jq -r ".commits[0].removed[]" <<< "${JSON_REQUEST}")"
     for F in ${commits_removed[@]} ; do
         if [[ "${F}" =~ .*\.dmn ]]; then
-            rm -f "${LOCAL_WEBDAV_DIR}/${F}"
+            rm -f "${APP_DIR}/${F}"
             loop_result=$?
             if [ ${loop_result} -ne 0 ]; then
                 copy_dmn_result=1

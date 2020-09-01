@@ -1,0 +1,16 @@
+schema_version: 1
+
+name: "org.kie.daas.modeler.backend"
+version: "0.1"
+description: "KIE DaaS modeler backend module"
+
+artifacts:
+  - name: kogito-tooling_online-editor-backend.zip
+    url: https://www.dropbox.com/s/vkmrj8p59612b5i/kogito-tooling_online-editor-backend.zip?dl=1
+    md5: d7b5158a33f889a6776251ad39fedea0
+  - name: node-v12.18.3-linux-x64.tar.xz
+    url: https://nodejs.org/dist/v12.18.3/node-v12.18.3-linux-x64.tar.xz
+    md5: e5e819b12680800fb1bc6c175f15ec56
+
+execute:
+  - script: "module.sh"

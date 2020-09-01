@@ -1,0 +1,13 @@
+schema_version: 1
+
+name: "org.kie.daas.modeler.frontend"
+version: "0.1"
+description: "KIE DaaS modeler frontend module"
+
+artifacts:
+  - name: kogito-tooling_online-editor.zip
+    url: https://www.dropbox.com/s/59x7z8uma5ifjzv/kogito-tooling_online-editor.zip?dl=1
+    md5: 4e76dd7c8af1953186911927b5ee76bb
+
+execute:
+  - script: "module.sh"

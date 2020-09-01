@@ -15,6 +15,7 @@ fi
 CONFIGURE_SCRIPTS=(
     ${DAAS_HOME}/launch/configure-user.sh
     ${DAAS_HOME}/launch/kubernetes-client.sh
+    ${DAAS_HOME}/launch/configure-modeler-frontend.sh
 )
 source ${DAAS_HOME}/launch/configure.sh
 #############################################

@@ -35,7 +35,7 @@ spec:
                   name: el-daas-workflow
                   namespace: kiegroup
                 spec:
-                  host: el-daas-workflow-kiegroup.apps-crc.testing
+                  host: ''
                   port:
                     targetPort: http-listener
                   to:

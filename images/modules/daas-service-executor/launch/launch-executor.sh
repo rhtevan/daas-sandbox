@@ -90,7 +90,7 @@ assemble_executor() {
   </dmndi:DMNDI>
 </dmn:definitions>
 EOF
-
+    
     mvn -e \
         dependency:resolve \
         dependency:resolve-plugins \
@@ -112,7 +112,10 @@ EOF
         -Dmaven.source.skip=true \
         -Dpmd.skip=true
 
-    sed -i 's/localhost/0.0.0.0/g' src/main/resources/application.properties
+    local app_props="src/main/resources/application.properties"
+    sed -i 's/localhost/0.0.0.0/g' ${app_props}
+    echo "\nkogito.decisions.stronglytyped=true" >> ${app_props}
+
     rm -f src/main/resources/*.bpmn*
     rm -rf src/test/java/*
     rm -rf /tmp/vertx-cache

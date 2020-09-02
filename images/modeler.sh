@@ -32,11 +32,19 @@ config_online_editor() {
 export const config = {
   development: {
     server: {
-      backendUrl: "MODELER_BACKEND_URL",
-      projectName: "MODELER_PROJECT_NAME",
-      saveDirectory: "MODELER_SAVE_DIRECTORY"
+      backendUrl: "MODELER_SERVER_BACKENDURL",
+      projectName: "MODELER_SERVER_PROJECTNAME",
+      saveDirectory: "MODELER_SERVER_SAVEDIRECTORY"
     },
-    openApiUrl: "EXECUTOR_URL"
+    openApi: {
+      url: "MODELER_OPENAPI_URL",
+      specPath: "MODELER_OPENAPI_SPECPATH"
+    },
+    publish: {
+      url: "MODELER_PUBLISH_URL",
+      appName: "MODELER_PUBLISH_APPNAME",
+      envName: "MODELER_PUBLISH_ENVNAME"
+    }
   }
 };
 EOF
@@ -47,9 +55,9 @@ config_online_editor_backend() {
 export const config = {
   development: {
     server: {
-      hooksDir: "MODELER_HOOKS_DIR",
-      projectsDir: "MODELER_PROJECTS_DIR",
-      port: "MODELER_PORT"
+      hooksDir: "MODELER_SERVER_HOOKSDIR",
+      projectsDir: "MODELER_SERVER_PROJECTSDIR",
+      port: "MODELER_SERVER_PORT"
     }
   }
 };

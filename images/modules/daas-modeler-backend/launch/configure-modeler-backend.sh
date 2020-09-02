@@ -4,15 +4,14 @@ configure() {
     local index_js="${DAAS_HOME}/modeler/backend/dist/index.js"
     if [ -f "${index_js}" ]; then
 
-        local modeler_hooks_dir="${MODELER_HOOKS_DIR:-${DAAS_HOME}/modeler/hooks}"
+        local modeler_hooks_dir="${DAAS_HOME}/modeler/hooks"
+        local modeler_projects_dir="${DAAS_HOME}/modeler/projects"
         mkdir -p ${modeler_hooks_dir}
-        sed -i "s,MODELER_HOOKS_DIR,${modeler_hooks_dir}/," ${index_js}
-
-        local modeler_projects_dir="${MODELER_PROJECTS_DIR:-${DAAS_HOME}/modeler/projects}"
         mkdir -p ${modeler_projects_dir}
-        sed -i "s,MODELER_PROJECTS_DIR,${modeler_projects_dir}/," ${index_js}
 
-        sed -i "s,MODELER_PORT,9090," ${index_js}
+        sed -i "s,MODELER_SERVER_HOOKSDIR,${modeler_hooks_dir}/,g" ${index_js}
+        sed -i "s,MODELER_SERVER_PROJECTSDIR,${modeler_projects_dir}/,g" ${index_js}
+        sed -i "s,MODELER_SERVER_PORT,9090,g" ${index_js}
 
         local app_name="${APPLICATION_NAME:-myapp}"
         local app_dir="${APPLICATION_PATH:-${DAAS_HOME}/apps/${app_name}}"

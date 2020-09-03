@@ -114,7 +114,9 @@ EOF
 
     local app_props="src/main/resources/application.properties"
     sed -i 's/localhost/0.0.0.0/g' ${app_props}
-    echo "\nkogito.decisions.stronglytyped=true" >> ${app_props}
+    echo "" >> ${app_props}
+    echo "kogito.decisions.stronglytyped=true" >> ${app_props}
+    echo "" >> ${app_props}
 
     rm -f src/main/resources/*.bpmn*
     rm -rf src/test/java/*

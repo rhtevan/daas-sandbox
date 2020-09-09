@@ -47,9 +47,8 @@ EOF
             local git_temp_dir="/tmp/git_${app_name}"
             git clone "${git_repo_dir}" "${git_temp_dir}"
             cd ${git_temp_dir}
-            mkdir -p src/main/resources
-            touch src/main/resources/.gitkeep
-            git add src/main/resources/.gitkeep
+            touch .gitignore
+            git add .gitignore
             git commit -m 'Initial commit'
             git push
             cd ..

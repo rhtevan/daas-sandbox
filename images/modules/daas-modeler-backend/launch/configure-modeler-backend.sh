@@ -13,10 +13,11 @@ configure() {
         sed -i "s,MODELER_SERVER_PROJECTSDIR,${modeler_projects_dir}/,g" ${index_js}
         sed -i "s,MODELER_SERVER_PORT,9090,g" ${index_js}
 
-        local app_name="${APPLICATION_NAME:-myapp}"
-        local app_dir="${APPLICATION_PATH:-${DAAS_HOME}/apps/${app_name}}"
-        local git_repo_dir="${modeler_projects_dir}/${app_name}.git"
+        source ${DAAS_HOME}/launch/application-utils.sh
+        local app_name=$(get_application_name)
+        local app_dir=$(get_application_directory)
 
+        local git_repo_dir="${modeler_projects_dir}/${app_name}.git"
         if [ ! -d "${git_repo_dir}" ]; then
             pushd . &> /dev/null
 
@@ -31,10 +32,14 @@ configure() {
             # add git hook
             cat <<EOF > hooks/post-receive
 #!/bin/sh
+
 unset GIT_INDEX_FILE
-export GIT_WORK_TREE="${app_dir}/"
+export GIT_WORK_TREE="${app_dir}/src/main/resources/"
 export GIT_DIR="${git_repo_dir}"
 git checkout -f
+
+# source ${DAAS_HOME}/launch/application-utils.sh
+# replace_application_xmlns_in_dir ${app_dir}/src/main/resources
 EOF
             chmod 775 hooks/post-receive
 

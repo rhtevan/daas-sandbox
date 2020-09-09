@@ -17,6 +17,7 @@ fi
 CONFIGURE_SCRIPTS=(
     ${DAAS_HOME}/launch/configure-user.sh
     ${DAAS_HOME}/launch/configure-maven.sh
+    ${DAAS_HOME}/launch/application-utils.sh
     /opt/run-java/proxy-options
 )
 source ${DAAS_HOME}/launch/configure.sh
@@ -34,18 +35,23 @@ source ${DAAS_HOME}/launch/configure.sh
 assemble_executor() {
     log_info "Building executor..."
 
-    local app_name="${APPLICATION_NAME:-myapp}"
-    local app_dir=${APPLICATION_PATH:-${DAAS_HOME}/apps/${app_name}}
+    source ${DAAS_HOME}/launch/application-utils.sh
+    local app_dir=$(get_application_directory)
+    local app_id=$(get_application_id)
+    local app_name=$(get_application_name)
+    local app_xmlns=$(get_application_xmlns)
 
-    local apps_dir=$(dirname ${app_dir})
-    mkdir -p ${apps_dir}
-    cd ${apps_dir}
+    local app_parent_dir=$(dirname ${app_dir})
+    if [ ! -d "${app_parent_dir}" ]; then
+        mkdir -p ${app_parent_dir}
+    fi
+    cd ${app_parent_dir}
 
     local project_group_id="${APPLICATION_GROUP_ID:-org.kie.daas.application}"
     local project_artifact_id="${APPLICATION_ARTIFACT_ID:-${app_name}}"
     local project_version="${APPLICATION_VERSION:-1.0}"
 
-    local kogito_version="${KOGITO_VERSION:-0.12.0}"
+    local kogito_version="${KOGITO_VERSION:-0.14.0}"
     local m2_dir=${DAAS_HOME}/.m2
 
     mvn -e \
@@ -59,18 +65,15 @@ assemble_executor() {
         -DartifactId=${project_artifact_id} \
         -Dversion=${project_version}
 
-    if [ "${project_artifact_id}" != "${app_name}" ]; then
-        mv "${project_artifact_id}" "${app_name}"
+    if [ "${app_parent_dir}/${project_artifact_id}" != "${app_dir}" ]; then
+        mv "${app_parent_dir}/${project_artifact_id}" "${app_dir}"
     fi
-    cd ${app_name}
+    cd "${app_dir}"
 
-    local app_ns=$(uuidgen); app_ns=${app_ns^^}
-    # local app_id=$(uuidgen); app_id=${app_id^^}
-    local app_id=${app_name}
     cat <<EOF > src/main/resources/${app_name}.dmn
 <dmn:definitions
     xmlns:dmn="http://www.omg.org/spec/DMN/20180521/MODEL/"
-    xmlns="https://kiegroup.org/dmn/_${app_ns}"
+    xmlns="${app_xmlns}"
     xmlns:di="http://www.omg.org/spec/DMN/20180521/DI/"
     xmlns:kie="http://www.drools.org/kie/dmn/1.2"
     xmlns:dmndi="http://www.omg.org/spec/DMN/20180521/DMNDI/"
@@ -79,7 +82,7 @@ assemble_executor() {
     id="${app_id}"
     name="${app_name}"
     typeLanguage="http://www.omg.org/spec/DMN/20180521/FEEL/"
-    namespace="https://kiegroup.org/dmn/_${app_ns}">
+    namespace="${app_xmlns}">
   <dmn:extensionElements/>
   <dmndi:DMNDI>
     <dmndi:DMNDiagram>
@@ -90,7 +93,7 @@ assemble_executor() {
   </dmndi:DMNDI>
 </dmn:definitions>
 EOF
-    
+
     mvn -e \
         dependency:resolve \
         dependency:resolve-plugins \
@@ -105,18 +108,21 @@ EOF
         -Dcheckstyle.skip=true \
         -Dfabric8.skip=true \
         -Dfindbugs.skip=true \
-        -Djacoco.skip=true \
         -DincludeScope=test \
+        -Djacoco.skip=true \
         -Dmaven.javadoc.skip=true \
         -Dmaven.site.skip=true \
         -Dmaven.source.skip=true \
         -Dpmd.skip=true
 
-    local app_props="src/main/resources/application.properties"
-    sed -i 's/localhost/0.0.0.0/g' ${app_props}
-    echo "" >> ${app_props}
-    echo "kogito.decisions.stronglytyped=true" >> ${app_props}
-    echo "" >> ${app_props}
+    # quarkus.smallrye-openapi-path has to match what's in daas-modeler-frontent/launch/configure-modeler-frontend.sh
+    cat <<EOF > src/main/resources/application.properties
+kogito.decisions.stronglytyped=true
+kogito.service.url=http://0.0.0.0:8080
+quarkus.http.cors=true
+quarkus.smallrye-openapi.path=/openapi
+quarkus.swagger-ui.always-include=true
+EOF
 
     rm -f src/main/resources/*.bpmn*
     rm -rf src/test/java/*
@@ -133,8 +139,9 @@ EOF
 run_executor() {
     log_info "Launching executor..."
 
-    local app_name="${APPLICATION_NAME:-myapp}"
-    local app_dir=${APPLICATION_PATH:-${DAAS_HOME}/apps/${app_name}}
+    source ${DAAS_HOME}/launch/application-utils.sh
+    local app_dir=$(get_application_directory)
+    local app_name=$(get_application_name)
 
     # NOTE: "resources" is the mount point, so move s2i items back if needed (see above)
     local res_dir=${app_dir}/src/main/resources
@@ -162,10 +169,6 @@ run_executor() {
         -Dquarkus.http.host=0.0.0.0 \
         -Dquarkus.http.port=${HTTP_PORT:-8080} \
         -DskipTests
-
-        # -Djava.library.path=${DAAS_HOME}/ssl-libs \
-        # -Djavax.net.ssl.trustStore=${DAAS_HOME}/cacerts \
-        # --no-transfer-progress
 }
 
 #############################################

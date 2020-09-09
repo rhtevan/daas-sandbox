@@ -18,8 +18,21 @@
             <id>default</id>
             <repositories>
                 <repository>
-                    <id>jboss-public-repository-group</id>
-                    <name>JBoss Public Repository Group</name>
+                    <id>redhat-ga-repository</id>
+                    <name>Red Hat GA Repository</name>
+                    <url>http://maven.repository.redhat.com/ga/</url>
+                    <releases>
+                        <enabled>true</enabled>
+                        <updatePolicy>never</updatePolicy>
+                    </releases>
+                    <snapshots>
+                        <enabled>false</enabled>
+                        <updatePolicy>never</updatePolicy>
+                    </snapshots>
+                </repository>
+                <repository>
+                    <id>jboss-public-repository</id>
+                    <name>JBoss Public Repository</name>
                     <url>https://repository.jboss.org/nexus/content/groups/public/</url>
                     <layout>default</layout>
                     <releases>
@@ -28,7 +41,7 @@
                     </releases>
                     <snapshots>
                         <enabled>true</enabled>
-                        <updatePolicy>always</updatePolicy>
+                        <updatePolicy>never</updatePolicy>
                     </snapshots>
                 </repository>
                 <!-- ### configured repositories ### -->
@@ -36,8 +49,21 @@
 
             <pluginRepositories>
                 <pluginRepository>
-                    <id>jboss-public-repository-group</id>
-                    <name>JBoss Public Repository Group</name>
+                    <id>redhat-ga-plugin-repository</id>
+                    <name>Red Hat GA Repository</name>
+                    <url>http://maven.repository.redhat.com/ga/</url>
+                    <releases>
+                        <enabled>true</enabled>
+                        <updatePolicy>never</updatePolicy>
+                    </releases>
+                    <snapshots>
+                        <enabled>false</enabled>
+                        <updatePolicy>never</updatePolicy>
+                    </snapshots>
+                </pluginRepository>
+                <pluginRepository>
+                    <id>jboss-public-plugin-repository</id>
+                    <name>JBoss Public Repository</name>
                     <url>https://repository.jboss.org/nexus/content/groups/public/</url>
                     <layout>default</layout>
                     <releases>
@@ -46,7 +72,7 @@
                     </releases>
                     <snapshots>
                         <enabled>true</enabled>
-                        <updatePolicy>always</updatePolicy>
+                        <updatePolicy>never</updatePolicy>
                     </snapshots>
                 </pluginRepository>
                 <!-- ### configured plugin repositories ### -->

@@ -29,8 +29,8 @@ parameters:
       Namespace in which the ImageStreams for DaaS images are installed. These
       ImageStreams are normally installed in the openshift namespace.  You need
       to modify this parameter only if you installed the ImageStream in a
-      different namespace/project. Default is 'openshift'.
-    value: openshift
+      different namespace/project. Default is 'kiegroup'.
+    value: kiegroup
     required: true
   - name: IMAGE_STREAM_TAG
     displayName: ImageStream Tag
@@ -92,6 +92,11 @@ parameters:
     description: Size of persistent storage for the Models volume.
     value: 100Mi
     required: true
+  - name: PROJECTS_VOLUME_CAPACITY
+    displayName: Projects Volume Capacity
+    description: Size of persistent storage for the Projects volume.
+    value: 100Mi
+    required: true
   - name: MAVEN_MIRROR_URL
     displayName: Maven Mirror URL
     description: URL pointing to a Maven Mirror to help speed up builds.
@@ -101,7 +106,7 @@ parameters:
   - name: KOGITO_VERSION
     displayName: Kogito Version
     description: The version of Kogito.
-    value: 0.12.0
+    value: 0.14.0
     required: true
   - name: SCRIPT_DEBUG
     displayName: Script Debug
@@ -395,17 +400,20 @@ objects:
               env:
                 - name: APPLICATION_NAME
                   value: '${APPLICATION_NAME}'
-                - name: APPLICATION_PATH
-                  value: '/home/daas/apps/${APPLICATION_NAME}'
                 - name: SCRIPT_DEBUG
                   value: '${SCRIPT_DEBUG}'
               volumeMounts:
                 - name: '${APPLICATION_NAME}-daas-models-pvol'
-                  mountPath: '/home/daas/apps/${APPLICATION_NAME}/src/main/resources'
+                  mountPath: '/home/daas/app/src/main/resources'
+                - name: '${APPLICATION_NAME}-daas-projects-pvol'
+                  mountPath: '/home/daas/modeler/projects'
           volumes:
             - name: '${APPLICATION_NAME}-daas-models-pvol'
               persistentVolumeClaim:
                 claimName: '${APPLICATION_NAME}-daas-models-claim'
+            - name: '${APPLICATION_NAME}-daas-projects-pvol'
+              persistentVolumeClaim:
+                claimName: '${APPLICATION_NAME}-daas-projects-claim'
   - kind: DeploymentConfig
     apiVersion: v1
     metadata:
@@ -457,15 +465,13 @@ objects:
               env:
                 - name: APPLICATION_NAME
                   value: '${APPLICATION_NAME}'
-                - name: APPLICATION_PATH
-                  value: '/home/daas/apps/${APPLICATION_NAME}'
                 - name: MAVEN_MIRROR_URL
                   value: '${MAVEN_MIRROR_URL}'
                 - name: SCRIPT_DEBUG
                   value: '${SCRIPT_DEBUG}'
               volumeMounts:
                 - name: '${APPLICATION_NAME}-daas-models-pvol'
-                  mountPath: '/home/daas/apps/${APPLICATION_NAME}/src/main/resources'
+                  mountPath: '/home/daas/app/src/main/resources'
           volumes:
             - name: '${APPLICATION_NAME}-daas-models-pvol'
               persistentVolumeClaim:
@@ -483,3 +489,16 @@ objects:
       resources:
         requests:
           storage: '${MODELS_VOLUME_CAPACITY}'
+  - kind: PersistentVolumeClaim
+    apiVersion: v1
+    metadata:
+      name: '${APPLICATION_NAME}-daas-projects-claim'
+      labels:
+        application: '${APPLICATION_NAME}'
+        service: '${APPLICATION_NAME}-daas-acceptor'
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: '${PROJECTS_VOLUME_CAPACITY}'

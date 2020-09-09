@@ -8,8 +8,10 @@ if [ -f  "${DAAS_HOME}/env" ]; then
     source "${DAAS_HOME}/env"
 fi
 
-CLONE_DIR="${WEBHOOK_CLONES_DIR:-${DAAS_HOME}/git/webhook-clones}/${APPLICATION_NAME:-myapp}"
-APP_DIR="${APPLICATION_PATH:-${DAAS_HOME}/apps/${APPLICATION_NAME:-myapp}}"
+source ${DAAS_HOME}/launch/application-utils.sh
+APP_DIR=$(get_application_directory)
+APP_NAME=$(get_application_name)
+CLONE_DIR="${WEBHOOK_CLONES_DIR:-${DAAS_HOME}/git/webhook-clones}/${APP_NAME}"
 
 sync_git() {
     local repository_clone_url="$(jq -r ".repository.clone_url" <<< "${JSON_REQUEST}")"
@@ -40,6 +42,8 @@ copy_dmn() {
             loop_result=$?
             if [ ${loop_result} -ne 0 ]; then
                 copy_dmn_result=1
+            # else
+            #     replace_application_xmlns_in_file "${APP_DIR}/${F}"
             fi
         fi
     done

@@ -19,5 +19,6 @@ modules:
       version: "7"
     - name: "org.kie.daas.system.packages"
     - name: "org.kie.daas.system.user"
+    - name: "org.kie.daas.scripts.application"
     - name: "org.kie.daas.scripts.launch"
     - name: "org.kie.daas.scripts.logging"

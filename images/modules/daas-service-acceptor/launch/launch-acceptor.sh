@@ -4,6 +4,7 @@ set -e
 
 # import
 source ${DAAS_HOME}/launch/logging.sh
+source ${DAAS_HOME}/launch/application-utils.sh
 
 # debug
 if [ "${SCRIPT_DEBUG}" = "true" ] ; then
@@ -24,7 +25,7 @@ log_info "Launching acceptor..."
 # sourced by www/cgi-bin/webhook
 env > ${DAAS_HOME}/env
 
-MODELS_DIR=${APPLICATION_PATH:-${DAAS_HOME}/apps/${APPLICATION_NAME:-myapp}}/src/main/resources
+MODELS_DIR="$(get_application_directory)/src/main/resources"
 mkdir -p ${MODELS_DIR}
 
 WEBDAV_CONF="/etc/httpd/conf.d/webdav.conf"

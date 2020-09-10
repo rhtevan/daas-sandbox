@@ -32,10 +32,10 @@ spec:
       type: string
       description: The endpoint of the image registry to which generated images will be published.
       default: 'image-registry.openshift-image-registry.svc:5000'
-    - name: builderimage
+    - name: builderimagename
       type: string
-      description: The base image used for packaging compiled runner
-      default: 'quay.io/kiegroup/kogito-quarkus-ubi8:latest'
+      description: The base imagename used for packaging compiled runner
+      default: 'quay.io/kiegroup/kogito-quarkus-ubi8'
     - name: executorhostname
       type: string
       description: >-
@@ -71,8 +71,8 @@ spec:
                   value: 'false'
                 - name: EXECUTOR_IMAGE
                   value: '$(params.imageregistry)/$(params.imagenamespace)/$(params.appname)-$(params.imagesuffix):$(params.imagetag)'
-                - name: BUILDER_IMAGE
-                  value: '$(params.builderimage)'
+                - name: BUILDER_IMAGE_NAME
+                  value: '$(params.builderimagename)'
                 - name: NATIVE
                   value: '$(params.native)'
               workspaces:

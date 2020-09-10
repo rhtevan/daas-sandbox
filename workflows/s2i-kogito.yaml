@@ -14,25 +14,17 @@ spec:
       description: >
         Verify the TLS on the registry endpoint (for push/pull to a non-TLS
         registry)
-    - name: MAVEN_ARGS_APPEND
-      type: string
-      default: ''
-      description: Additional Maven arguments
-    - name: MAVEN_CLEAR_REPO
-      type: string
-      default: 'false'
-      description: Remove the Maven repository after the artifact is built
-    - name: MAVEN_MIRROR_URL
-      type: string
-      default: ''
-      description: The base URL of a mirror used for retrieving artifacts
     - name: EXECUTOR_IMAGE
       type: string
       description: The full image tag of the generated executor image
-    - name: BUILDER_IMAGE
+    - name: BUILDER_IMAGE_NAME
       type: string
-      default: 'quay.io/kiegroup/kogito-quarkus-jvm-ubi8:latest'
+      default: 'quay.io/kiegroup/kogito-quarkus-jvm-ubi8'
       description: The base image used for packaging compiled runner
+    - name: KOGITO_IMAGE_NAME_SUFFIX
+      type: string
+      default: '-nightly:latest'
+      description: The Kogito image name suffix including Kogito version
     - name: NATIVE
       type: string
       default: 'false'
@@ -60,7 +52,7 @@ spec:
         - name: envparams
           mountPath: /env-params
     - name: compile
-      image: quay.io/kiegroup/kogito-quarkus-ubi8-s2i:latest
+      image: quay.io/kiegroup/kogito-quarkus-ubi8-s2i$(params.KOGITO_IMAGE_NAME_SUFFIX)
       script: |
         #!/usr/bin/env bash
         appName="$(params.APPLICATION_NAME)"
@@ -105,7 +97,7 @@ spec:
         - s2i
         - build
         - target
-        - $(params.BUILDER_IMAGE)
+        - $(params.BUILDER_IMAGE_NAME)$(params.KOGITO_IMAGE_NAME_SUFFIX)
         - '--image-scripts-url'
         - 'image:///usr/local/s2i'
         - '--as-dockerfile'

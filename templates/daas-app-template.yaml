@@ -103,11 +103,6 @@ parameters:
     value: >-
       http://nexus3-kogito-tools.apps.kogito.automation.rhmw.io/repository/maven-public
     required: false
-  - name: KOGITO_VERSION
-    displayName: Kogito Version
-    description: The version of Kogito.
-    value: 0.14.0
-    required: true
   - name: SCRIPT_DEBUG
     displayName: Script Debug
     description: Whether to run scripts in debug mode.
@@ -268,8 +263,6 @@ objects:
           env:
             - name: APPLICATION_NAME
               value: '${APPLICATION_NAME}'
-            - name: KOGITO_VERSION
-              value: '${KOGITO_VERSION}'
             - name: MAVEN_MIRROR_URL
               value: '${MAVEN_MIRROR_URL}'
             - name: SCRIPT_DEBUG

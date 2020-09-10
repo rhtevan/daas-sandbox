@@ -51,7 +51,8 @@ assemble_executor() {
     local project_artifact_id="${APPLICATION_ARTIFACT_ID:-${app_name}}"
     local project_version="${APPLICATION_VERSION:-1.0}"
 
-    local kogito_version="${KOGITO_VERSION:-0.14.0}"
+    # local kogito_version="${KOGITO_VERSION:-0.14.0}"
+    local kogito_version="${KOGITO_VERSION:-1.0.0-SNAPSHOT}"
     local m2_dir=${DAAS_HOME}/.m2
 
     mvn -e \

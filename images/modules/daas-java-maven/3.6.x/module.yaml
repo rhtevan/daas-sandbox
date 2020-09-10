@@ -33,7 +33,7 @@ envs:
     example: "true"
   - name: "JBOSS_MAVEN_REPO_URL"
     value: "https://repository.jboss.org/nexus/content/groups/public/"
-    description: "Defines the Jboss Maven repository for Kogito artifacts."
+    description: "Defines the Jboss Maven repository for artifacts."
   - name: "MAVEN_REPO_URL"
     description: "Defines an extra Maven repository."
     example: "https://nexus.test.com/group/public"

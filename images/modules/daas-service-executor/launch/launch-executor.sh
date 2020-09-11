@@ -125,7 +125,9 @@ quarkus.smallrye-openapi.path=/openapi
 quarkus.swagger-ui.always-include=true
 EOF
 
+    # stuff we don't need anymore
     rm -f src/main/resources/*.bpmn*
+    rm -f src/main/resources/*.dmn
     rm -rf src/test/java/*
     rm -rf /tmp/vertx-cache
 

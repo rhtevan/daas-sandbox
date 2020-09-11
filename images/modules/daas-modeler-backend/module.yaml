@@ -6,8 +6,8 @@ description: "KIE DaaS modeler backend module"
 
 artifacts:
   - name: kogito-tooling_online-editor-backend.zip
-    url: https://www.dropbox.com/s/lcwg7mik85lxlud/kogito-tooling_online-editor-backend.zip?dl=1
-    md5: 179794326da677fdba923ea528254ed4
+    url: https://www.dropbox.com/s/6jdroe7s8y6wbkz/kogito-tooling_online-editor-backend.zip?dl=1
+    md5: 210032b96cbed273945b496b6790f57d
   - name: node-v12.18.3-linux-x64.tar.xz
     url: https://nodejs.org/dist/v12.18.3/node-v12.18.3-linux-x64.tar.xz
     md5: e5e819b12680800fb1bc6c175f15ec56

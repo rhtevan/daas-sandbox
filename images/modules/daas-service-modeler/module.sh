@@ -38,6 +38,11 @@ install_module() {
     fi
 
     # ----------------------------------------------------------------
+    # publish via: el-daas-workflow
+
+    echo 'ProxyPass "/publish" "http://el-daas-workflow:8080"' >> "${http_conf}"
+
+    # ----------------------------------------------------------------
     # permissions
 
     for ch_dir in /etc/httpd /var/www /var/log/httpd /var/run/httpd /run/httpd ; do

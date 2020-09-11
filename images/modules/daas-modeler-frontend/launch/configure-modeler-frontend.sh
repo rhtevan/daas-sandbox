@@ -27,10 +27,11 @@ configure() {
         # below has to match the quarkus.smallrye-openapi.path property set in launch-executor.sh
         sed -i "s,MODELER_OPENAPI_SPECPATH,/openapi,g" ${index_js}
 
-        # TODO: remove hardcoded namespace and domain of this url
-        local workflow_publish_url="http://el-daas-workflow-${k8s_ns}.apps-crc.testing"
+        local modeler_route_name=${DAAS_MODELER_ROUTE_NAME:-${app_name}-daas-modeler}
+        local modeler_hostname_http=${DAAS_MODELER_HOSTNAME_HTTP:-${HOSTNAME:-localhost}}
+        local modeler_publish_url=$(build_route_url "${modeler_route_name}" "http" "${modeler_hostname_http}" "80" "/publish")
 
-        sed -i "s,MODELER_PUBLISH_URL,${workflow_publish_url},g" ${index_js}
+        sed -i "s,MODELER_PUBLISH_URL,${modeler_publish_url},g" ${index_js}
         sed -i "s,MODELER_PUBLISH_APPNAME,${app_name},g" ${index_js}
         sed -i "s,MODELER_PUBLISH_ENVNAME,${k8s_ns},g" ${index_js}
 

@@ -17,15 +17,15 @@ configure() {
         local app_name=$(get_application_name)
         local app_dir=$(get_application_directory)
 
+        git config --global user.email "daas@kiegroup.org"
+        git config --global user.name "DaaS"
+
         local git_repo_dir="${modeler_projects_dir}/${app_name}.git"
         if [ ! -d "${git_repo_dir}" ]; then
             pushd . &> /dev/null
 
             mkdir -p ${git_repo_dir}
             cd ${git_repo_dir}
-
-            git config --global user.email "daas@kiegroup.org"
-            git config --global user.name "DaaS"
 
             # init the repo
             git init --bare

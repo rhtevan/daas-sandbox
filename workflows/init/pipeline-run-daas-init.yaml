@@ -1,0 +1,208 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: pipeline-run-daas-init
+spec:
+  params:
+    - name: imagenamespace
+      value: 'kiegroup' 
+  pipelineSpec:
+    params:
+      - name: imagetag
+        type: string
+        description: A named pointer to an image in an image stream. Default is '0.1'.
+        default: '0.1'
+      - name: imagenamespace
+        type: string
+        description: >
+          Namespace in which the ImageStreams for DaaS images are installed. These
+          ImageStreams are normally installed in the openshift namespace.  You need
+          to modify this parameter only if you installed the ImageStream in a
+          different namespace/project.
+        default: 'openshift'
+      - name: imageregistry
+        type: string
+        description: The endpoint of the image registry to which generated images will be published.
+        default: 'image-registry.openshift-image-registry.svc:5000'
+      - name: maven-mirror
+        type: string
+        description: URL pointing to a Maven Mirror to help speed up builds.
+        default: 'http://nexus3-kogito-tools.apps.kogito.automation.rhmw.io/repository/maven-public'
+      - name: script-debug
+        type: string
+        description: Whether to run scripts in debug mode.
+        default: 'true'
+    tasks:
+      - name: create-el-route-and-workdir-pvc
+        params:
+          - name: imgreg
+            value: $(params.imageregistry)
+          - name: debug
+            value: $(params.script-debug)
+        taskSpec:
+          params:
+            - name: imgreg
+            - name: debug
+          steps:
+            - name: create-route
+              image: '$(params.imgreg)/openshift/cli:latest'
+              script: |
+                #!/usr/bin/env bash
+                debug='$(params.debug)'
+                [[ ${debug^^} == 'TRUE' ]] && set -x  
+                oc apply -f - << 'EOF'
+                apiVersion: route.openshift.io/v1
+                kind: Route
+                metadata:
+                  labels:
+                    app.kubernetes.io/managed-by: EventListener
+                    app.kubernetes.io/part-of: Triggers
+                    eventlistener: daas-workflow
+                  name: el-daas-workflow
+                  namespace: kiegroup
+                spec:
+                  host: ''
+                  port:
+                    targetPort: http-listener
+                  to:
+                    kind: Service
+                    name: el-daas-workflow
+                    weight: 100
+                  wildcardPolicy: None
+                EOF
+            - name: create-pvc
+              image: '$(params.imgreg)/openshift/cli:latest'
+              script: |
+                #!/usr/bin/env bash
+                debug='$(params.debug)'
+                [[ ${debug^^} == 'TRUE' ]] && set -x  
+                oc apply -f - << 'EOF'
+                apiVersion: v1
+                kind: PersistentVolumeClaim
+                metadata:
+                  name: daas-work-dir-pvc
+                spec:
+                  resources:
+                    requests:
+                      storage: 10Gi
+                  volumeMode: Filesystem
+                  accessModes:
+                    - ReadWriteMany
+                EOF
+      - name: build-daas-executor-ubi8
+        params:
+          - name: imgreg
+            value: $(params.imageregistry)
+          - name: imgns
+            value: $(params.imagenamespace)
+          - name: imgtag
+            value: $(params.imagetag)
+          - name: builder
+            value: 'daas-executor-ubi8-s2i'
+          - name: executor
+            value: 'daas-executor-ubi8'
+          - name: mirror
+            value: $(params.maven-mirror)
+          - name: debug
+            value: $(params.script-debug)
+        taskSpec:
+          params:
+            - name: imgreg
+            - name: imgns
+            - name: imgtag
+            - name: builder
+            - name: executor
+            - name: mirror
+            - name: debug
+          steps:
+            - name: build
+              image: '$(params.imgreg)/openshift/cli:latest'
+              script: |
+                #!/usr/bin/env bash
+                debug='$(params.debug)'
+                [[ ${debug^^} == 'TRUE' ]] && set -x  
+                echo Building '$(params.executor):$(params.imgtag)' with '$(params.builder):$(params.imgtag)'
+                oc apply -f - << 'EOF'
+                apiVersion: v1
+                kind: ImageStream
+                metadata:
+                  name: '$(params.executor)'
+                ---
+                apiVersion: v1
+                kind: BuildConfig
+                metadata:
+                  name: '$(params.executor)'
+                  annotations:
+                    template.alpha.openshift.io/wait-for-ready: 'true'
+                spec:
+                  strategy:
+                    type: Source
+                    sourceStrategy:
+                      env:
+                        - name: MAVEN_MIRROR_URL
+                          value: '$(params.mirror)'
+                        - name: SCRIPT_DEBUG
+                          value: '$(params.debug)'
+                      forcePull: true
+                      from:
+                        kind: ImageStreamTag
+                        namespace: '$(params.imgns)'
+                        name: '$(params.builder):$(params.imgtag)'
+                  output:
+                    to:
+                      kind: ImageStreamTag
+                      namespace: '$(params.imgns)'
+                      name: '$(params.executor):$(params.imgtag)'
+                  triggers:
+                    - type: ImageChange
+                      imageChange: {}
+                    - type: ConfigChange
+                EOF
+            - name: wait-build-finish
+              image: '$(params.imgreg)/openshift/cli:latest'
+              script: |
+                #!/usr/bin/env bash
+                debug='$(params.debug)'
+                [[ ${debug^^} == 'TRUE' ]] && set -x  
+                sleep 60 # Waiting for creating the bc or new build
+                echo -n Wait...
+                while [[ $(oc get build -o jsonpath="{.items[?(@.status.phase=='Running')].metadata.name}"  | wc -c) -ne 0 ]]; do
+                  echo -n . && sleep 15
+                done
+                echo && echo Done
+      - name: initialize-workdir-pvc
+        runAfter:
+          - create-el-route-and-workdir-pvc
+          - build-daas-executor-ubi8
+        params:
+          - name: imgreg
+            value: $(params.imageregistry)
+          - name: executor
+            value: $(params.imageregistry)/$(params.imagenamespace)/daas-executor-ubi8:$(params.imagetag)
+          - name: debug
+            value: $(params.script-debug)
+        taskSpec:
+          params:
+            - name: imgreg
+            - name: executor
+            - name: debug
+          steps:
+            - name: init-workdir
+              image: '$(params.executor)'
+              script: |
+                #!/usr/bin/env bash
+                debug='$(params.debug)'
+                [[ ${debug^^} == 'TRUE' ]] && set -x  
+                # Copy maven repository to shared storage
+                cp -rf /home/daas/.m2/repository/* /mnt/repo
+              securityContext:
+                runAsUser: 1001
+                runAsGroup: 0
+              volumeMounts:
+                - name: daas-work-dir
+                  subPath: maven/repository
+                  mountPath: /mnt/repo
+          volumes:
+            - name: daas-work-dir
+              persistentVolumeClaim:
+                claimName: daas-work-dir-pvc 

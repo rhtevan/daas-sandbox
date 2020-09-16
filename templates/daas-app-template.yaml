@@ -37,34 +37,6 @@ parameters:
     description: A named pointer to an image in an image stream. Default is '0.1'.
     value: '0.1'
     required: true
-  - name: DAAS_MODELER_IMAGE_STREAM_NAME
-    displayName: DaaS Modeler ImageStream Name
-    description: >-
-      The name of the image stream to use for DaaS Modeler. Default is
-      'daas-modeler-ubi8'.
-    value: daas-modeler-ubi8
-    required: true
-  - name: DAAS_ACCEPTOR_IMAGE_STREAM_NAME
-    displayName: DaaS Acceptor ImageStream Name
-    description: >-
-      The name of the image stream to use for DaaS Acceptor. Default is
-      'daas-acceptor-ubi8'.
-    value: daas-acceptor-ubi8
-    required: true
-  - name: DAAS_EXECUTOR_IMAGE_STREAM_NAME
-    displayName: DaaS Executor ImageStream Name
-    description: >-
-      The name of the image stream to use for DaaS Executor. Default is
-      'daas-executor-ubi8'.
-    value: daas-executor-ubi8
-    required: true
-  - name: DAAS_EXECUTOR_S2I_IMAGE_STREAM_NAME
-    displayName: DaaS Executor S2I ImageStream Name
-    description: >-
-      The name of the image stream to use for DaaS Executor S2I. Default is
-      'daas-executor-ubi8-s2i'.
-    value: daas-executor-ubi8-s2i
-    required: true
   - name: DAAS_MODELER_HOSTNAME_HTTP
     displayName: Daas Modeler Custom http Route Hostname
     description: >-
@@ -86,22 +58,6 @@ parameters:
       default hostname, e.g.:
       '<application-name>-executor-<project>.<default-domain-suffix>'
     value: ''
-    required: false
-  - name: MODELS_VOLUME_CAPACITY
-    displayName: Models Volume Capacity
-    description: Size of persistent storage for the Models volume.
-    value: 100Mi
-    required: true
-  - name: PROJECTS_VOLUME_CAPACITY
-    displayName: Projects Volume Capacity
-    description: Size of persistent storage for the Projects volume.
-    value: 100Mi
-    required: true
-  - name: MAVEN_MIRROR_URL
-    displayName: Maven Mirror URL
-    description: URL pointing to a Maven Mirror to help speed up builds.
-    value: >-
-      http://nexus3-kogito-tools.apps.kogito.automation.rhmw.io/repository/maven-public
     required: false
   - name: SCRIPT_DEBUG
     displayName: Script Debug
@@ -240,47 +196,6 @@ objects:
         name: '${APPLICATION_NAME}-daas-executor'
       port:
         targetPort: http
-  - kind: ImageStream
-    apiVersion: v1
-    metadata:
-      name: '${DAAS_EXECUTOR_IMAGE_STREAM_NAME}'
-      labels:
-        application: '${APPLICATION_NAME}'
-        service: '${APPLICATION_NAME}-daas-executor'
-  - kind: BuildConfig
-    apiVersion: v1
-    metadata:
-      name: '${DAAS_EXECUTOR_IMAGE_STREAM_NAME}'
-      labels:
-        application: '${APPLICATION_NAME}'
-        service: '${APPLICATION_NAME}-daas-executor'
-      annotations:
-        template.alpha.openshift.io/wait-for-ready: 'true'
-    spec:
-      strategy:
-        type: Source
-        sourceStrategy:
-          env:
-            - name: APPLICATION_NAME
-              value: '${APPLICATION_NAME}'
-            - name: MAVEN_MIRROR_URL
-              value: '${MAVEN_MIRROR_URL}'
-            - name: SCRIPT_DEBUG
-              value: '${SCRIPT_DEBUG}'
-          forcePull: true
-          from:
-            kind: ImageStreamTag
-            namespace: '${IMAGE_STREAM_NAMESPACE}'
-            name: '${DAAS_EXECUTOR_S2I_IMAGE_STREAM_NAME}:${IMAGE_STREAM_TAG}'
-      output:
-        to:
-          kind: ImageStreamTag
-          namespace: '${IMAGE_STREAM_NAMESPACE}'
-          name: '${DAAS_EXECUTOR_IMAGE_STREAM_NAME}:latest'
-      triggers:
-        - type: ImageChange
-          imageChange: {}
-        - type: ConfigChange
   - kind: DeploymentConfig
     apiVersion: v1
     metadata:
@@ -306,7 +221,7 @@ objects:
             from:
               kind: ImageStreamTag
               namespace: '${IMAGE_STREAM_NAMESPACE}'
-              name: '${DAAS_MODELER_IMAGE_STREAM_NAME}:${IMAGE_STREAM_TAG}'
+              name: 'daas-modeler-ubi8:${IMAGE_STREAM_TAG}'
         - type: ConfigChange
       replicas: 1
       selector:
@@ -323,7 +238,7 @@ objects:
           terminationGracePeriodSeconds: 60
           containers:
             - name: '${APPLICATION_NAME}-daas-modeler'
-              image: '${DAAS_MODELER_IMAGE_STREAM_NAME}'
+              image: 'daas-modeler-ubi8'
               imagePullPolicy: Always
               ports:
                 - name: http
@@ -367,7 +282,7 @@ objects:
             from:
               kind: ImageStreamTag
               namespace: '${IMAGE_STREAM_NAMESPACE}'
-              name: '${DAAS_ACCEPTOR_IMAGE_STREAM_NAME}:${IMAGE_STREAM_TAG}'
+              name: 'daas-acceptor-ubi8:${IMAGE_STREAM_TAG}'
         - type: ConfigChange
       replicas: 1
       selector:
@@ -384,7 +299,7 @@ objects:
           terminationGracePeriodSeconds: 60
           containers:
             - name: '${APPLICATION_NAME}-daas-acceptor'
-              image: '${DAAS_ACCEPTOR_IMAGE_STREAM_NAME}'
+              image: 'daas-acceptor-ubi8'
               imagePullPolicy: Always
               ports:
                 - name: http
@@ -396,17 +311,16 @@ objects:
                 - name: SCRIPT_DEBUG
                   value: '${SCRIPT_DEBUG}'
               volumeMounts:
-                - name: '${APPLICATION_NAME}-daas-models-pvol'
+                - name: 'daas-work-dir'
+                  subPath: 'resources/${APPLICATION_NAME}'
                   mountPath: '/home/daas/app/src/main/resources'
-                - name: '${APPLICATION_NAME}-daas-projects-pvol'
+                - name: 'daas-work-dir'
+                  subPath: 'projects/${APPLICATION_NAME}'
                   mountPath: '/home/daas/modeler/projects'
           volumes:
-            - name: '${APPLICATION_NAME}-daas-models-pvol'
+            - name: 'daas-work-dir'
               persistentVolumeClaim:
-                claimName: '${APPLICATION_NAME}-daas-models-claim'
-            - name: '${APPLICATION_NAME}-daas-projects-pvol'
-              persistentVolumeClaim:
-                claimName: '${APPLICATION_NAME}-daas-projects-claim'
+                claimName: 'daas-work-dir-pvc'
   - kind: DeploymentConfig
     apiVersion: v1
     metadata:
@@ -430,9 +344,9 @@ objects:
             containerNames:
               - '${APPLICATION_NAME}-daas-executor'
             from:
-              kind: ImageStream
+              kind: ImageStreamTag
               namespace: '${IMAGE_STREAM_NAMESPACE}'
-              name: '${DAAS_EXECUTOR_IMAGE_STREAM_NAME}'
+              name: 'daas-executor-ubi8:${IMAGE_STREAM_TAG}'
         - type: ConfigChange
       replicas: 1
       selector:
@@ -449,7 +363,7 @@ objects:
           terminationGracePeriodSeconds: 60
           containers:
             - name: '${APPLICATION_NAME}-daas-executor'
-              image: '${DAAS_EXECUTOR_IMAGE_STREAM_NAME}'
+              image: 'daas-executor-ubi8'
               imagePullPolicy: Always
               ports:
                 - name: http
@@ -463,35 +377,10 @@ objects:
                 - name: SCRIPT_DEBUG
                   value: '${SCRIPT_DEBUG}'
               volumeMounts:
-                - name: '${APPLICATION_NAME}-daas-models-pvol'
+                - name: 'daas-work-dir'
+                  subPath: 'resources/${APPLICATION_NAME}'
                   mountPath: '/home/daas/app/src/main/resources'
           volumes:
-            - name: '${APPLICATION_NAME}-daas-models-pvol'
+            - name: 'daas-work-dir'
               persistentVolumeClaim:
-                claimName: '${APPLICATION_NAME}-daas-models-claim'
-  - kind: PersistentVolumeClaim
-    apiVersion: v1
-    metadata:
-      name: '${APPLICATION_NAME}-daas-models-claim'
-      labels:
-        application: '${APPLICATION_NAME}'
-        service: '${APPLICATION_NAME}-daas-acceptor'
-    spec:
-      accessModes:
-        - ReadWriteOnce
-      resources:
-        requests:
-          storage: '${MODELS_VOLUME_CAPACITY}'
-  - kind: PersistentVolumeClaim
-    apiVersion: v1
-    metadata:
-      name: '${APPLICATION_NAME}-daas-projects-claim'
-      labels:
-        application: '${APPLICATION_NAME}'
-        service: '${APPLICATION_NAME}-daas-acceptor'
-    spec:
-      accessModes:
-        - ReadWriteOnce
-      resources:
-        requests:
-          storage: '${PROJECTS_VOLUME_CAPACITY}'
+                claimName: 'daas-work-dir-pvc'

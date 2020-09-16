@@ -1,0 +1,50 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: work-dir-prepare-daas
+spec:
+  params:
+    - name: APPLICATION_NAME
+      type: string
+      default: 'myapp'
+      description: The application name
+    - name: EXECUTOR_IMAGE
+      type: string
+      description: The full image tag of the generated executor image
+    - name: DEBUG 
+      type: string
+      description: Whether to run scripts in debug mode.
+      default: 'true'
+    - name: FROM_EXAMPLE
+      type: string
+      description: If true the daas application is cloned from kogito examples.
+      default: 'false'
+  workspaces:
+    - name: resources
+    - name: projects
+    - name: examples
+  steps:
+    - name: prepare
+      image: $(params.EXECUTOR_IMAGE)
+      script: |
+        #!/usr/bin/env bash
+        debug='$(params.DEBUG)'
+        [[ ${debug^^} == 'TRUE' ]] && set -x
+        appname="$(params.APPLICATION_NAME)"
+        example="$(params.FROM_EXAMPLE)"
+        appdir="/home/daas/app"
+        prjdir="$(workspaces.projects.path)/$appname"
+        egdir="$(workspaces.examples.path)/$appname"
+        resdir="$(workspaces.resources.path)/$appname"
+
+        [[ -d "$prjdir" ]] && echo "Clean previous project directory" && rm -rf "$prjdir"
+        if [[ ${example^^} == 'TRUE' ]]; then
+          # copy project from example
+          [[ ! -d "$egdir" ]] && echo "Example application: $appname not found" && exit 1
+          cp -rf "$egdir" "$prjdir"
+        else
+          # merge project from resources and executor appdir
+          cp -rf "$appdir" "$prjdir"
+          mv "$prjdir/src/main/resources.s2i" "$prjdir/src/main/resources"
+          cp -rf $resdir/* "$prjdir/src/main/resources"
+        fi

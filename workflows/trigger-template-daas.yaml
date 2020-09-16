@@ -12,10 +12,6 @@ spec:
       type: string
       description: If true build native image
       default: 'true'
-    - name: imagesuffix
-      type: string
-      description: The suffix for executor image or daas service component
-      default: 'daas-executor-native'
     - name: imagetag
       type: string
       description: A named pointer to an image in an image stream. Default is '0.1'.
@@ -43,6 +39,14 @@ spec:
         default hostname, e.g.:
         '<application-name>-daas-executor-native-<project>.<default-domain-suffix>'
       default: ''
+    - name: debug
+      type: string
+      description: Whether to run scripts in debug mode.
+      default: 'true'
+    - name: fromexample
+      type: string
+      description: If true the daas application is cloned from kogito examples.
+      default: 'false'
   resourcetemplates:
     - apiVersion: tekton.dev/v1beta1
       kind: PipelineRun
@@ -50,36 +54,68 @@ spec:
         name: $(params.appname)-daas-workflow-$(uid)
       spec:
         workspaces:
-          - name: work-dir
+          - name: res
             persistentVolumeClaim:
               claimName: daas-work-dir-pvc
-            subPath: work
-          - name: repo-dir
+            subPath: resources
+          - name: prj
             persistentVolumeClaim:
               claimName: daas-work-dir-pvc
-            subPath: maven
+            subPath: maven/projects
+          - name: eg
+            persistentVolumeClaim:
+              claimName: daas-work-dir-pvc
+            subPath: maven/examples
+          - name: repo
+            persistentVolumeClaim:
+              claimName: daas-work-dir-pvc
+            subPath: maven/repository
         pipelineSpec:
           workspaces:
-            - name: work-dir
-            - name: repo-dir
+            - name: res
+            - name: prj
+            - name: eg
+            - name: repo
           tasks:
+            - name: prepare-maven-project
+              params:
+                - name: APPLICATION_NAME
+                  value: '$(params.appname)'
+                - name: EXECUTOR_IMAGE
+                  value: '$(params.imageregistry)/$(params.imagenamespace)/daas-executor-ubi8:$(params.imagetag)'
+                - name: DEBUG
+                  value: '$(params.debug)'
+                - name: FROM_EXAMPLE
+                  value: '$(params.fromexample)'
+              workspaces:
+                - name: resources
+                  workspace: res
+                - name: projects
+                  workspace: prj
+                - name: examples
+                  workspace: eg
+              taskRef:
+                name: work-dir-prepare-daas
+                kind: Task
             - name: compile-build-push
+              runAfter:
+                - prepare-maven-project
               params:
                 - name: APPLICATION_NAME
                   value: '$(params.appname)'
                 - name: TLSVERIFY
                   value: 'false'
                 - name: EXECUTOR_IMAGE
-                  value: '$(params.imageregistry)/$(params.imagenamespace)/$(params.appname)-$(params.imagesuffix):$(params.imagetag)'
+                  value: '$(params.imageregistry)/$(params.imagenamespace)/$(params.appname)-daas-executor-native:$(params.imagetag)'
                 - name: BUILDER_IMAGE_NAME
                   value: '$(params.builderimagename)'
                 - name: NATIVE
                   value: '$(params.native)'
               workspaces:
                 - name: source
-                  workspace: work-dir
+                  workspace: prj
                 - name: repo
-                  workspace: repo-dir
+                  workspace: repo
               taskRef:
                 name: s2i-kogito
                 kind: ClusterTask
@@ -92,8 +128,10 @@ spec:
                     image: 'image-registry.openshift-image-registry.svc:5000/openshift/cli:latest'
                     script: |
                       #!/usr/bin/env bash
+                      debug='$(params.debug)'
+                      [[ ${debug^^} == 'TRUE' ]] && set -x
                       echo "checking openshift resources for daas"
-                      [[ $( oc get dc $(params.appname)-$(params.imagesuffix) ) ]] && echo "daas resources found" && exit 0
+                      [[ $( oc get dc $(params.appname)-daas-executor-native ) ]] && echo "daas resources found" && exit 0
 
                       echo "creating openshift resources for daas" 
                       oc apply -f - << 'EOF'
@@ -101,10 +139,10 @@ spec:
                       apiVersion: v1
                       kind: Service
                       metadata:
-                        name: '$(params.appname)-$(params.imagesuffix)'
+                        name: '$(params.appname)-daas-executor-native'
                         labels:
                           application: '$(params.appname)'
-                          service: '$(params.appname)-$(params.imagesuffix)'
+                          service: '$(params.appname)-daas-executor-native'
                         annotations:
                         description: The native DaaS executor web server ports.
                       spec:
@@ -113,7 +151,7 @@ spec:
                             port: 8080
                             targetPort: 8080
                         selector:
-                          deploymentConfig: '$(params.appname)-$(params.imagesuffix)'
+                          deploymentConfig: '$(params.appname)-daas-executor-native'
                         sessionAffinity: ClientIP
                         sessionAffinityConfig:
                           clientIP:
@@ -121,29 +159,29 @@ spec:
                       ---
                       apiVersion: v1
                       kind: Route
-                      id: '$(params.appname)-$(params.imagesuffix)-http'
+                      id: '$(params.appname)-daas-executor-native-http'
                       metadata:
-                        name: '$(params.appname)-$(params.imagesuffix)'
+                        name: '$(params.appname)-daas-executor-native'
                       labels:
                         application: '$(params.appname)'
-                        service: '$(params.appname)-$(params.imagesuffix)'
+                        service: '$(params.appname)-daas-executor-native'
                       annotations:
                         description: Route for DaaS native executor's http service.
                         haproxy.router.openshift.io/balance: source
                       spec:
                         host: '$(params.executorhostname)'
                         to:
-                          name: '$(params.appname)-$(params.imagesuffix)'
+                          name: '$(params.appname)-daas-executor-native'
                         port:
                           targetPort: http
                       ---
                       apiVersion: v1
                       kind: DeploymentConfig
                       metadata:
-                        name: '$(params.appname)-$(params.imagesuffix)'
+                        name: '$(params.appname)-daas-executor-native'
                         labels:
                           application: '$(params.appname)'
-                          service: '$(params.appname)-$(params.imagesuffix)'
+                          service: '$(params.appname)-daas-executor-native'
                       spec:
                         revisionHistoryLimit: 10
                         strategy:
@@ -156,27 +194,27 @@ spec:
                             imageChangeParams:
                               automatic: true
                               containerNames:
-                                - '$(params.appname)-$(params.imagesuffix)'
+                                - '$(params.appname)-daas-executor-native'
                               from:
                                 kind: ImageStreamTag
                                 namespace: '$(params.imagenamespace)'
-                                name: '$(params.appname)-$(params.imagesuffix):$(params.imagetag)'
+                                name: '$(params.appname)-daas-executor-native:$(params.imagetag)'
                           - type: ConfigChange
                         replicas: 1
                         selector:
-                          deploymentConfig: '$(params.appname)-$(params.imagesuffix)'
+                          deploymentConfig: '$(params.appname)-daas-executor-native'
                         template:
                           metadata:
-                            name: '$(params.appname)-$(params.imagesuffix)'
+                            name: '$(params.appname)-daas-executor-native'
                             labels:
-                              deploymentConfig: '$(params.appname)-$(params.imagesuffix)'
+                              deploymentConfig: '$(params.appname)-daas-executor-native'
                               application: '$(params.appname)'
-                              service: '$(params.appname)-$(params.imagesuffix)'
+                              service: '$(params.appname)-daas-executor-native'
                           spec:
                             terminationGracePeriodSeconds: 60
                             containers:
-                              - name: '$(params.appname)-$(params.imagesuffix)'
-                                image: '$(params.appname)-$(params.imagesuffix)'
+                              - name: '$(params.appname)-daas-executor-native'
+                                image: '$(params.appname)-daas-executor-native'
                                 imagePullPolicy: Always
                                 ports:
                                   - name: http

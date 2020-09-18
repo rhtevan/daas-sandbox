@@ -20,7 +20,7 @@ get_kubernetes_namespace() {
 }
 
 get_application_name() {
-    echo ${APPLICATION_NAME:-${1:-myapp}}
+    echo ${APPLICATION_NAME:-${1:-DaaS}}
 }
 
 get_application_id() {

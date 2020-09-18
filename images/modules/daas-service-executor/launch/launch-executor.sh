@@ -124,6 +124,8 @@ quarkus.http.cors=true
 quarkus.smallrye-openapi.path=/openapi
 quarkus.swagger-ui.always-include=true
 EOF
+    mkdir -p src/test/resources
+    cp -f src/main/resources/application.properties src/test/resources
 
     # stuff we don't need anymore
     rm -f src/main/resources/*.bpmn*
@@ -144,7 +146,6 @@ run_executor() {
 
     source ${DAAS_HOME}/launch/application-utils.sh
     local app_dir=$(get_application_directory)
-    local app_name=$(get_application_name)
 
     # NOTE: "resources" is the mount point, so move s2i items back if needed (see above)
     local res_dir=${app_dir}/src/main/resources

@@ -161,7 +161,7 @@ run_executor() {
 
     cd ${app_dir}
     local m2_dir=${DAAS_HOME}/.m2
-    exec mvn -e -o \
+    exec mvn -e \
         clean \
         compile \
         quarkus:dev \

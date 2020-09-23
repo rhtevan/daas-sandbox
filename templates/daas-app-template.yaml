@@ -59,6 +59,11 @@ parameters:
       '<application-name>-executor-<project>.<default-domain-suffix>'
     value: ''
     required: false
+  - name: MAVEN_MIRROR_URL
+    displayName: Maven Mirror URL
+    description: URL pointing to a Maven Mirror to help speed up builds.
+    value: ''
+    required: false
   - name: SCRIPT_DEBUG
     displayName: Script Debug
     description: Whether to run scripts in debug mode.

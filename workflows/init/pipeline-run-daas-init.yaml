@@ -20,6 +20,10 @@ spec:
           to modify this parameter only if you installed the ImageStream in a
           different namespace/project.
         default: 'openshift'
+      - name: kogito-version
+        type: string
+        description: The Kogito version
+        default: '1.0.0-SNAPSHOT'
       - name: imageregistry
         type: string
         description: The endpoint of the image registry to which generated images will be published.
@@ -27,7 +31,7 @@ spec:
       - name: maven-mirror
         type: string
         description: URL pointing to a Maven Mirror to help speed up builds.
-        default: 'http://nexus3-kogito-tools.apps.kogito.automation.rhmw.io/repository/maven-public'
+        default: ''
       - name: script-debug
         type: string
         description: Whether to run scripts in debug mode.
@@ -97,6 +101,8 @@ spec:
             value: $(params.imagenamespace)
           - name: imgtag
             value: $(params.imagetag)
+          - name: version
+            value: $(params.kogito-version)
           - name: builder
             value: 'daas-executor-ubi8-s2i'
           - name: executor
@@ -110,6 +116,7 @@ spec:
             - name: imgreg
             - name: imgns
             - name: imgtag
+            - name: version
             - name: builder
             - name: executor
             - name: mirror
@@ -139,6 +146,8 @@ spec:
                     type: Source
                     sourceStrategy:
                       env:
+                        - name: KOGITO_VERSION
+                          value: '$(params.version)'
                         - name: MAVEN_MIRROR_URL
                           value: '$(params.mirror)'
                         - name: SCRIPT_DEBUG

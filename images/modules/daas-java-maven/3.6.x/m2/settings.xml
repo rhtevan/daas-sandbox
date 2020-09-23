@@ -20,7 +20,7 @@
                 <repository>
                     <id>redhat-ga-repository</id>
                     <name>Red Hat GA Repository</name>
-                    <url>http://maven.repository.redhat.com/ga/</url>
+                    <url>https://maven.repository.redhat.com/ga/</url>
                     <releases>
                         <enabled>true</enabled>
                         <updatePolicy>never</updatePolicy>
@@ -51,7 +51,7 @@
                 <pluginRepository>
                     <id>redhat-ga-plugin-repository</id>
                     <name>Red Hat GA Repository</name>
-                    <url>http://maven.repository.redhat.com/ga/</url>
+                    <url>https://maven.repository.redhat.com/ga/</url>
                     <releases>
                         <enabled>true</enabled>
                         <updatePolicy>never</updatePolicy>

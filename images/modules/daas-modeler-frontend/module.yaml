@@ -6,8 +6,8 @@ description: "KIE DaaS modeler frontend module"
 
 artifacts:
   - name: kogito-tooling_online-editor.zip
-    url: https://www.dropbox.com/s/vk9exioqlytichw/kogito-tooling_online-editor.zip?dl=1
-    md5: 2777c161ebd7726ee54bca6590bd12d4
+    url: https://www.dropbox.com/s/wracv3hae45eyzi/kogito-tooling_online-editor.zip?dl=1
+    md5: 9959440d65728c1ca476ec73b50aeb0c
 
 execute:
   - script: "module.sh"

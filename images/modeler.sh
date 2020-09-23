@@ -21,7 +21,7 @@ clone_kogito_tooling() {
 
     git clone https://github.com/kelvah/kogito-tooling
     cd kogito-tooling
-    git checkout DAAS-POC
+    git checkout DAAS-POC-DMNRESULT
 
     popd &> /dev/null
 }
@@ -39,6 +39,10 @@ export const config = {
     openApi: {
       url: "MODELER_OPENAPI_URL",
       specPath: "MODELER_OPENAPI_SPECPATH"
+    },
+    explainability: {
+      serviceUrl: "MODELER_EXPLAINABILITY_SERVICEURL",
+      auditUIUrl: "MODELER_EXPLAINABILITY_AUDITUIURL"
     },
     publish: {
       url: "MODELER_PUBLISH_URL",
@@ -111,7 +115,7 @@ package_kogito_tooling() {
 }
 
 main() {
-    for cmd in java mvn node npm yarn ; do
+    for cmd in git java mvn node npm yarn ; do
         if ! os_has_cmd ${cmd} ; then
             echo "Missing command: ${cmd}"
             return 1

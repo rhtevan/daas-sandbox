@@ -69,3 +69,24 @@ items:
           from:
             kind: DockerImage
             name: 'quay.io/kiegroup/daas-executor-ubi8-s2i:0.1'
+  - kind: ImageStream
+    apiVersion: v1
+    metadata:
+      name: daas-explainability-ubi8
+      annotations:
+        openshift.io/display-name: DaaS Explainability 0.1
+        openshift.io/provider-display-name: 'Red Hat, Inc.'
+    spec:
+      tags:
+        - name: '0.1'
+          annotations:
+            description: DaaS 0.1 Explainability image
+            iconClass: icon-jboss
+            tags: 'daas,kie,kiegroup,jboss'
+            supports: 'daas:0.1'
+            version: '0.1'
+          referencePolicy:
+            type: Local
+          from:
+            kind: DockerImage
+            name: 'quay.io/kiegroup/daas-explainability-ubi8:0.1'

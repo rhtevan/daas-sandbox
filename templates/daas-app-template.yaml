@@ -59,6 +59,14 @@ parameters:
       '<application-name>-executor-<project>.<default-domain-suffix>'
     value: ''
     required: false
+  - name: DAAS_EXPLAINABILITY_HOSTNAME_HTTP
+    displayName: Daas Explainability Custom http Route Hostname
+    description: >-
+      Custom hostname for DaaS explainability http service route. Leave blank for
+      default hostname, e.g.:
+      '<application-name>-explainability-<project>.<default-domain-suffix>'
+    value: ''
+    required: false
   - name: MAVEN_MIRROR_URL
     displayName: Maven Mirror URL
     description: URL pointing to a Maven Mirror to help speed up builds.
@@ -150,6 +158,26 @@ objects:
         service: '${APPLICATION_NAME}-daas-executor'
       annotations:
         description: The DaaS executor web server ports.
+  - kind: Service
+    apiVersion: v1
+    spec:
+      ports:
+        - name: http
+          port: 8080
+          targetPort: 8080
+      selector:
+        deploymentConfig: '${APPLICATION_NAME}-daas-explainability'
+      sessionAffinity: ClientIP
+      sessionAffinityConfig:
+        clientIP:
+          timeoutSeconds: 3600
+    metadata:
+      name: '${APPLICATION_NAME}-daas-explainability'
+      labels:
+        application: '${APPLICATION_NAME}'
+        service: '${APPLICATION_NAME}-daas-explainability'
+      annotations:
+        description: The DaaS explainability web server ports.
   - kind: Route
     apiVersion: v1
     id: '${APPLICATION_NAME}-daas-modeler-http'
@@ -199,6 +227,23 @@ objects:
       host: '${DAAS_EXECUTOR_HOSTNAME_HTTP}'
       to:
         name: '${APPLICATION_NAME}-daas-executor'
+      port:
+        targetPort: http
+  - kind: Route
+    apiVersion: v1
+    id: '${APPLICATION_NAME}-daas-explainability-http'
+    metadata:
+      name: '${APPLICATION_NAME}-daas-explainability'
+      labels:
+        application: '${APPLICATION_NAME}'
+        service: '${APPLICATION_NAME}-daas-explainability'
+      annotations:
+        description: Route for DaaS explainability's http service.
+        haproxy.router.openshift.io/balance: source
+    spec:
+      host: '${DAAS_EXPLAINABILITY_HOSTNAME_HTTP}'
+      to:
+        name: '${APPLICATION_NAME}-daas-explainability'
       port:
         targetPort: http
   - kind: DeploymentConfig
@@ -260,6 +305,10 @@ objects:
                   value: '${APPLICATION_NAME}-daas-executor'
                 - name: DAAS_EXECUTOR_HOSTNAME_HTTP
                   value: '${DAAS_EXECUTOR_HOSTNAME_HTTP}'
+                - name: DAAS_EXPLAINABILITY_ROUTE_NAME
+                  value: '${APPLICATION_NAME}-daas-explainability'
+                - name: DAAS_EXPLAINABILITY_HOSTNAME_HTTP
+                  value: '${DAAS_EXPLAINABILITY_HOSTNAME_HTTP}'
                 - name: SCRIPT_DEBUG
                   value: '${SCRIPT_DEBUG}'
   - kind: DeploymentConfig
@@ -389,3 +438,51 @@ objects:
             - name: 'daas-work-dir'
               persistentVolumeClaim:
                 claimName: 'daas-work-dir-pvc'
+  - kind: DeploymentConfig
+    apiVersion: v1
+    metadata:
+      name: '${APPLICATION_NAME}-daas-explainability'
+      labels:
+        application: '${APPLICATION_NAME}'
+        service: '${APPLICATION_NAME}-daas-explainability'
+      annotations:
+        template.alpha.openshift.io/wait-for-ready: 'true'
+    spec:
+      revisionHistoryLimit: 10
+      strategy:
+        type: Rolling
+        rollingParams:
+          maxSurge: 100%
+          maxUnavailable: 0
+      triggers:
+        - type: ImageChange
+          imageChangeParams:
+            automatic: true
+            containerNames:
+              - '${APPLICATION_NAME}-daas-explainability'
+            from:
+              kind: ImageStreamTag
+              namespace: '${IMAGE_STREAM_NAMESPACE}'
+              name: 'daas-explainability-ubi8:${IMAGE_STREAM_TAG}'
+        - type: ConfigChange
+      replicas: 1
+      selector:
+        deploymentConfig: '${APPLICATION_NAME}-daas-explainability'
+      template:
+        metadata:
+          name: '${APPLICATION_NAME}-daas-explainability'
+          labels:
+            deploymentConfig: '${APPLICATION_NAME}-daas-explainability'
+            application: '${APPLICATION_NAME}'
+            service: '${APPLICATION_NAME}-daas-explainability'
+        spec:
+          serviceAccountName: '${APPLICATION_NAME}-daas-svcacct'
+          terminationGracePeriodSeconds: 60
+          containers:
+            - name: '${APPLICATION_NAME}-daas-explainability'
+              image: 'daas-explainability-ubi8'
+              imagePullPolicy: Always
+              ports:
+                - name: http
+                  containerPort: 8080
+                  protocol: TCP

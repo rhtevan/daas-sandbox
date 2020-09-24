@@ -21,7 +21,7 @@ clone_kogito_tooling() {
 
     git clone https://github.com/kelvah/kogito-tooling
     cd kogito-tooling
-    git checkout DAAS-POC-DMNRESULT
+    git checkout DAAS-POC
 
     popd &> /dev/null
 }

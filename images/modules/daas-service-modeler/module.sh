@@ -12,7 +12,7 @@ install_module() {
     cp -v -r ${SCRIPT_DIR}/launch/* ${DAAS_HOME}/launch
 
     # ----------------------------------------------------------------
-    # basic httpd config
+    # httpd config (basic)
 
     local http_conf="/etc/httpd/conf/httpd.conf"
     # local http_host="${HTTP_HOST:-localhost}"
@@ -24,7 +24,22 @@ install_module() {
     # sed -i "s/#ServerName www.example.com:80/ServerName ${http_host}:${http_port}/g" "${http_conf}"
 
     # ----------------------------------------------------------------
-    # modeler frontend
+    # httpd config (compress json and other static file types)
+
+    cat <<EOF >> "${http_conf}"
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/xml
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE application/xml
+    AddOutputFilterByType DEFLATE application/xhtml+xml
+    AddOutputFilterByType DEFLATE application/rss+xml
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/x-javascript
+EOF
+
+    # ----------------------------------------------------------------
+    # modeler (frontend)
 
     mkdir -p /var/www/html
 

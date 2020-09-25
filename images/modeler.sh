@@ -1,8 +1,8 @@
 #!/bin/sh
 
 # This script is only here temporarily to build the online editor frontend and
-# background zips manually, which then get updloaded to dropbox for use in the
-# build (see moduls.sh). When the artifats are complete and ready for our
+# background zips manually, which then get uploaded to dropbox for use in the
+# build (see modules.sh). When the artifacts are complete and ready for our
 # purposes, this can be removed, and new urls in module.yaml can be used.
 
 set -e
@@ -69,12 +69,10 @@ EOF
 }
 
 build_online_editor() {
-    :
-    # TODO: use once all the online-editor tests pass
-    # pushd . &> /dev/null
-    # cd packages/online-editor
-    # yarn run build:prod
-    # popd &> /dev/null
+    pushd . &> /dev/null
+    cd packages/online-editor
+    yarn run build:fast --mode production --devtool none
+    popd &> /dev/null
 }
 
 build_online_editor_backend() {

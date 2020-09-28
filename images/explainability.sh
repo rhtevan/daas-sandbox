@@ -2,6 +2,13 @@
 
 # Per instructions here: https://github.com/kostola/kogito-explainability-daas-poc
 
+# NOTE: The build is also available on quay.io:
+# RTAG="quay.io/alcosta/explainability-service-rest-daas:latest"
+# LTAG="default-route-openshift-image-registry.apps-crc.testing/kiegroup/daas-explainability-ubi8:0.1"
+# docker pull ${RTAG}
+# docker tag ${RTAG} ${LTAG}
+# docker push ${LTAG}
+
 set -e
 
 os_has_cmd() {

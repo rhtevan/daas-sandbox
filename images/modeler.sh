@@ -68,20 +68,6 @@ export const config = {
 EOF
 }
 
-build_online_editor() {
-    pushd . &> /dev/null
-    cd packages/online-editor
-    yarn run build:fast --mode production --devtool none
-    popd &> /dev/null
-}
-
-build_online_editor_backend() {
-    pushd . &> /dev/null
-    cd packages/online-editor-backend
-    yarn run build:prod
-    popd &> /dev/null
-}
-
 build_kogito_tooling() {
     pushd . &> /dev/null
 
@@ -95,10 +81,7 @@ build_kogito_tooling() {
     config_online_editor_backend
 
     yarn run init
-    yarn run build:fast
-
-    build_online_editor
-    build_online_editor_backend
+    yarn run build:fast -- -- --mode production --devtool none
 
     popd &> /dev/null
 }

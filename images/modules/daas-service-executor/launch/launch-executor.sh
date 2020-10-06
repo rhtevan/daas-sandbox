@@ -122,6 +122,7 @@ EOF
     # quarkus.smallrye-openapi-path has to match what's in daas-modeler-frontent/launch/configure-modeler-frontend.sh
     cat <<EOF > src/main/resources/application.properties
 kogito.decisions.stronglytyped=true
+kogito.decisions.validation=IGNORE
 kogito.service.url=http://0.0.0.0:8080
 quarkus.http.cors=true
 quarkus.smallrye-openapi.path=/openapi

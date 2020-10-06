@@ -121,12 +121,17 @@ EOF
 
     # quarkus.smallrye-openapi-path has to match what's in daas-modeler-frontent/launch/configure-modeler-frontend.sh
     cat <<EOF > src/main/resources/application.properties
-kogito.decisions.stronglytyped=true
 kogito.decisions.validation=IGNORE
+kogito.decisions.stronglytyped=true
+
 kogito.service.url=http://0.0.0.0:8080
+
 quarkus.http.cors=true
 quarkus.smallrye-openapi.path=/openapi
 quarkus.swagger-ui.always-include=true
+
+# Maximum Java heap to be used during the native image generation
+quarkus.native.native-image-xmx=4g
 EOF
     mkdir -p src/test/resources
     cp -f src/main/resources/application.properties src/test/resources

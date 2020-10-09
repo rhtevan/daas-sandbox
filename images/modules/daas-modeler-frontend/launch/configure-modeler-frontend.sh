@@ -39,11 +39,11 @@ configure() {
 
         sed -i "s,MODELER_EXPLAINABILITY_SERVICEURL,${explainability_url},g" ${index_js}
 
-        # TODO
+        # TODO: remove hardcoding
         # local auditui_route_name=${DAAS_AUDITUI_ROUTE_NAME:-${app_name}-daas-auditui}
         # local auditui_hostname_http=${DAAS_AUDITUI_HOSTNAME_HTTP:-${HOSTNAME:-localhost}}
         # local auditui_url=$(build_route_url "${auditui_route_name}" "http" "${auditui_hostname_http}" "80" "")
-        local auditui_url="https://www.redhat.com/"
+        local auditui_url="http://trusty-ui-kogito.apps.mw-ocp4.cloud.lab.eng.bos.redhat.com/audit"
 
         sed -i "s,MODELER_EXPLAINABILITY_AUDITUIURL,${auditui_url},g" ${index_js}
 

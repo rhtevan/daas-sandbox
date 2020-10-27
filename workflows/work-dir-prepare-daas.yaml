@@ -26,6 +26,7 @@ spec:
   steps:
     - name: prepare
       image: $(params.EXECUTOR_IMAGE)
+      imagePullPolicy: Always
       script: |
         #!/usr/bin/env bash
         debug='$(params.DEBUG)'

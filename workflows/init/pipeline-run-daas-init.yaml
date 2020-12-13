@@ -23,7 +23,7 @@ spec:
       - name: kogito-version
         type: string
         description: The Kogito version
-        default: '1.0.0-SNAPSHOT'
+        default: '0.16.0'
       - name: imageregistry
         type: string
         description: The endpoint of the image registry to which generated images will be published.

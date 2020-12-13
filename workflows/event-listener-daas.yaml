@@ -7,6 +7,6 @@ spec:
   triggers:
     - name: daas
       bindings:
-        - name: daas-workflow-binding
+        - ref: daas-workflow-binding
       template:
         name: daas-workflow-template
